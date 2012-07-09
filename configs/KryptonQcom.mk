@@ -1,3 +1,6 @@
+# include common-utils
+include vendor/krypton/configs/KryptonUtils.mk
+
 # Board platforms
 QCOM_MSMNILE := sm8150 msmnile
 
