@@ -151,3 +151,7 @@ PRODUCT_RESTRICT_VENDOR_FILES := false
 # https://source.android.com/devices/tech/connect/quick-access-wallet
 PRODUCT_PACKAGES += \
     QuickAccessWallet
+
+# Include librsjni explicitly to workaround GMS issue
+PRODUCT_PACKAGES += \
+    librsjni
