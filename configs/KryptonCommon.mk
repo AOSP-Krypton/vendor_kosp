@@ -123,7 +123,8 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.setupwizard.enterprise_mode=1 \
     ro.com.android.dateformat=MM-dd-yyyy \
     ro.build.selinux=1 \
-	media.recorder.show_manufacturer_and_model=true
+	media.recorder.show_manufacturer_and_model=true \
+	ro.storage_manager.enabled=true
 
 # Charger
 PRODUCT_PACKAGES += \
