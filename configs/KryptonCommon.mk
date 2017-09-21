@@ -31,3 +31,16 @@ endif
 
 # Sepolicy
 include vendor/krypton/sepolicy/KryptonSepolicy.mk
+
+# gms
+ifeq ($(PRODUCT_GMS_CLIENTID_BASE),)
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.com.google.clientidbase=android-google
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.com.google.clientidbase=$(PRODUCT_GMS_CLIENTID_BASE)
+endif
+
+# Copy all krypton-specific init rc files
+$(foreach f,$(wildcard vendor/krypton/prebuilts/etc/init/*.rc),\
+	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM)/etc/init/$(notdir $f)))
