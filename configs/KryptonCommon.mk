@@ -123,3 +123,7 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.setupwizard.enterprise_mode=1 \
     ro.com.android.dateformat=MM-dd-yyyy \
     ro.build.selinux=1
+
+# Charger
+PRODUCT_PACKAGES += \
+    charger_res_images
