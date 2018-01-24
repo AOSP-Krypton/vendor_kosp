@@ -122,7 +122,8 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.com.android.wifi-watchlist=GoogleGuest \
     ro.setupwizard.enterprise_mode=1 \
     ro.com.android.dateformat=MM-dd-yyyy \
-    ro.build.selinux=1
+    ro.build.selinux=1 \
+	media.recorder.show_manufacturer_and_model=true
 
 # Charger
 PRODUCT_PACKAGES += \
