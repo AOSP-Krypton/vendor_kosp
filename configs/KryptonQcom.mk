@@ -21,3 +21,7 @@ endif
 
 # Get relative path for caf stuff
 get-caf-path = hardware/qcom-caf/$(QCOM_BOARD_PATH)/$(1)
+
+# Include caf wlan in cfi path
+PRODUCT_CFI_INCLUDE_PATHS += \
+    hardware/qcom-caf/wlan/qcwcn/wpa_supplicant_8_lib
