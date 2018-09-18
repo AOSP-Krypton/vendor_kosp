@@ -1,0 +1,24 @@
+bootstrap_go_package {
+    name: "soong-krypton",
+    pkgPath: "krypton/soong/android",
+    srcs: [
+        "android/config.go",
+        "android/variable.go",
+    ],
+}
+
+bootstrap_go_package {
+    name: "soong-krypton-generator",
+    pkgPath: "krypton/soong/generator",
+    deps: [
+        "blueprint",
+        "blueprint-pathtools",
+        "soong",
+        "soong-android",
+        "soong-shared",
+    ],
+    srcs: [
+        "generator/generator.go",
+    ],
+    pluginFor: ["soong_build"],
+}
