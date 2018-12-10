@@ -125,7 +125,8 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.build.selinux=1 \
 	media.recorder.show_manufacturer_and_model=true \
 	ro.storage_manager.enabled=true \
-	persist.sys.disable_rescue=true
+	persist.sys.disable_rescue=true \
+	net.tethering.noprovisioning=true
 
 # Charger
 PRODUCT_PACKAGES += \
