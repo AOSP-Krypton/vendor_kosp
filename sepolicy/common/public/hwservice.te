@@ -1,0 +1,1 @@
+type hal_krypton_touch_hwservice, hwservice_manager_type;
