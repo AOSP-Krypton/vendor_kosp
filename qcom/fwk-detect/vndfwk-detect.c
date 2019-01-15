@@ -32,18 +32,14 @@
 
 #include "vndfwk-detect.h"
 
-#define BUILD_ID_PROPERTY "ro.build.id"
+#define VALUEADD_AOSP_SUPPORT_PROPERTY "ro.vendor.qti.va_aosp.support"
 
 int isRunningWithVendorEnhancedFramework() {
-    char build_id[PROPERTY_VALUE_MAX];
-    property_get(BUILD_ID_PROPERTY, build_id, NULL);
-    build_id[PROPERTY_VALUE_MAX-1] = '\0';
+    bool va_aosp_support = false;
+    va_aosp_support = property_get_bool(VALUEADD_AOSP_SUPPORT_PROPERTY, false);
 
-    if ((strlen(build_id) > 3)
-        && (build_id[1] == 'K')
-        && (build_id[2] == 'Q')) {
+    if (va_aosp_support)
         return 1;
-    }
 
     return 0;
 }
