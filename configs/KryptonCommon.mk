@@ -126,7 +126,8 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 	media.recorder.show_manufacturer_and_model=true \
 	ro.storage_manager.enabled=true \
 	persist.sys.disable_rescue=true \
-	net.tethering.noprovisioning=true
+	net.tethering.noprovisioning=true \
+	ro.opa.eligible_device=true
 
 # Charger
 PRODUCT_PACKAGES += \
