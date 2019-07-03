@@ -51,5 +51,10 @@ public class VndFwkDetect
         return native_isRunningWithVendorEnhancedFramework();
     }
 
+    public int getVendorEnhancedInfo() {
+        return native_getVendorEnhancedInfo();
+    }
+
     private native int native_isRunningWithVendorEnhancedFramework();
+    private native int native_getVendorEnhancedInfo();
 }

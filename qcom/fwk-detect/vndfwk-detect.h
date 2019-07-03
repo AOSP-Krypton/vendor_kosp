@@ -31,5 +31,6 @@
 #define __VNDFWK_DETECT_H__
 // return 1 on enhanced AOSP framework; 0 otherwise
 int isRunningWithVendorEnhancedFramework(void);
+int getVendorEnhancedInfo(void);
 
 #endif  // __VNDFWK_DETECT_H__

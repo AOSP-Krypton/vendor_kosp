@@ -33,6 +33,9 @@
 #include "vndfwk-detect.h"
 
 #define VALUEADD_AOSP_SUPPORT_PROPERTY "ro.vendor.qti.va_aosp.support"
+#define VALUEADD_ODM_SUPPORT_PROPERTY "ro.vendor.qti.va_odm.support"
+#define VND_ENHANCED_ODM_STATUS_BIT 0x01
+#define VND_ENHANCED_SYS_STATUS_BIT 0x02
 
 int isRunningWithVendorEnhancedFramework() {
     bool va_aosp_support = false;
@@ -42,4 +45,31 @@ int isRunningWithVendorEnhancedFramework() {
         return 1;
 
     return 0;
+}
+
+/*
+ * int getVendorEnhancedInfo(void)
+ * return val(int32_t):
+ * bit0: for ODM status
+ *    =>0: PureAOSP Building
+ *    =>1: QC VA Building
+ *
+ * bit1: for System status
+ *    =>0: PureAOSP Building
+ *    =>1: QC VA Building
+ */
+int getVendorEnhancedInfo() {
+    int val = 0;
+    bool va_odm_support = false;
+    va_odm_support = property_get_bool(VALUEADD_ODM_SUPPORT_PROPERTY, false);
+
+    if (va_odm_support) {
+        val |= VND_ENHANCED_ODM_STATUS_BIT;
+    }
+
+    if (1 == isRunningWithVendorEnhancedFramework()) {
+        val |= VND_ENHANCED_SYS_STATUS_BIT;
+    }
+
+    return val;
 }

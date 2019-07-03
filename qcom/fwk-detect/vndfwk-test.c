@@ -35,5 +35,8 @@ int main()
     printf("The framework is %s AOSP\n",
         (isRunningWithVendorEnhancedFramework() ?
             "enhanced" : "unmodified"));
+    printf("The value of vendor enhanced info: %d\n",
+        getVendorEnhancedInfo());
+
     return 0;
 }

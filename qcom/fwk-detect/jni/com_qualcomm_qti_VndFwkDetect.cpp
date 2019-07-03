@@ -43,11 +43,12 @@
 typedef struct dlHandler {
     void *dlHandle;
     int (*vndFwkDetect)(void);
+    int (*vndEnhancedInfo)(void);
     const char *dlName;
 } dlHandler;
 
 static dlHandler mDlHandler = {
-    NULL, NULL, VNDFWK_DETECT_LIB};
+    NULL, NULL, NULL, VNDFWK_DETECT_LIB};
 
 static void
 com_qualcomm_qti_VndFwkDetect_init()
@@ -57,6 +58,18 @@ com_qualcomm_qti_VndFwkDetect_init()
 
     *(void **)(&mDlHandler.vndFwkDetect) = dlsym(mDlHandler.dlHandle, "isRunningWithVendorEnhancedFramework");
     if (mDlHandler.vndFwkDetect == NULL)
+    {
+        if (mDlHandler.dlHandle)
+        {
+            dlclose(mDlHandler.dlHandle);
+            mDlHandler.dlHandle = NULL;
+        }
+
+        return;
+    }
+
+    *(void **)(&mDlHandler.vndEnhancedInfo) = dlsym(mDlHandler.dlHandle, "getVendorEnhancedInfo");
+    if (mDlHandler.vndEnhancedInfo == NULL)
     {
         if (mDlHandler.dlHandle)
         {
@@ -75,12 +88,20 @@ com_qualcomm_qti_VndFwkDetect_native_isRunningWithVendorEnhancedFramework(JNIEnv
         return (*mDlHandler.vndFwkDetect)();
 
     return 0;
-
 }
 
 
+static int
+com_qualcomm_qti_VndFwkDetect_native_getVendorEnhancedInfo(JNIEnv *env, jobject clazz)
+{
+    if(mDlHandler.vndEnhancedInfo != NULL)
+        return (*mDlHandler.vndEnhancedInfo)();
+
+    return 0;
+}
 static JNINativeMethod gMethods[] = {
-    {"native_isRunningWithVendorEnhancedFramework", "()I", (int*)com_qualcomm_qti_VndFwkDetect_native_isRunningWithVendorEnhancedFramework}
+    {"native_isRunningWithVendorEnhancedFramework", "()I", (int*)com_qualcomm_qti_VndFwkDetect_native_isRunningWithVendorEnhancedFramework},
+    {"native_getVendorEnhancedInfo", "()I", (int*)com_qualcomm_qti_VndFwkDetect_native_getVendorEnhancedInfo}
 };
 
 /*
