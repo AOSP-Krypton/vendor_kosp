@@ -121,7 +121,7 @@ jint JNI_OnLoad(JavaVM *jvm, void *reserved)
         return JNI_ERR;
     }
 
-    clazz = e->FindClass("com.qualcomm.qti.VndFwkDetect");
+    clazz = e->FindClass("com/qualcomm/qti/VndFwkDetect");
     if((jclass)0 == clazz) {
         ALOGE("JNI_OnLoad: FindClass failed");
         return JNI_ERR;
