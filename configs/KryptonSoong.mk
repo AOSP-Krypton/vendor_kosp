@@ -1,8 +1,12 @@
 # Krypton soong configs
 
+PATH_OVERRIDE_SOONG := $(shell echo $(PATH_OVERRIDE))
 # Add variables that we wish to make available to soong here.
 EXPORT_TO_SOONG := \
+    MAKE \
     KERNEL_ARCH \
+    PATH_OVERRIDE_SOONG \
+    TEMP_TOP \
     KERNEL_MAKE_ENV_SOONG \
     KERNEL_CROSS_COMPILE \
     TARGET_KERNEL_SOURCE

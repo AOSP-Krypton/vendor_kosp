@@ -21,7 +21,7 @@ krypton_generator {
     name: "generated_kernel_includes",
 
     // The headers make command
-    cmd: "make -C $(TARGET_KERNEL_SOURCE) O=$(genDir) $(KERNEL_MAKE_ENV_SOONG) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) headers_install",
+    cmd: "$(MAKE) -C $(TARGET_KERNEL_SOURCE) O=$(TEMP_TOP)$(genDir) $(KERNEL_MAKE_ENV_SOONG) $(PATH_OVERRIDE_SOONG) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) headers_install",
 
     // Directories that can be imported by a cc_* module generated_headers property
     export_include_dirs: ["usr/include"],
