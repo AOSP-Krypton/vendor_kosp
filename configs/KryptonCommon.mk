@@ -127,7 +127,8 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 	ro.storage_manager.enabled=true \
 	persist.sys.disable_rescue=true \
 	net.tethering.noprovisioning=true \
-	ro.opa.eligible_device=true
+	ro.opa.eligible_device=true \
+	ro.boot.vendor.overlay.theme=com.android.internal.systemui.navbar.gestural
 
 # Charger
 PRODUCT_PACKAGES += \
