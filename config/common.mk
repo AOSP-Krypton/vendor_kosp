@@ -131,6 +131,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
     pm.dexopt.ab-ota=quicken
 endif
 
+# Flatten APEXs for performance
+OVERRIDE_TARGET_FLATTEN_APEX := true
+
 ifeq ($(GAPPS_BUILD),true)
     $(call inherit-product-if-exists, vendor/google/gms/config.mk)
     $(call inherit-product-if-exists, vendor/google/pixel/config.mk)
