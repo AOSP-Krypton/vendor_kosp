@@ -4,17 +4,18 @@ function krypton_help() {
 cat <<EOF
 Krypton specific functions:
 - cleanup:    Clean \$OUT directory, logs, as well as intermediate zips if any.
-- launch:     Usage: launch <target> <variant> <q> <sign>
+- launch:     Usage: launch <target> <variant> -q -s
               Clean and then build a full ota.
               Pass target name and build variant as space separated arguments (mandatory).
-              Optionally pass "q" to run silently.
-              Optionally pass "sing" to generate signed ota.
+              Optionally pass -q to run silently.
+              Optionally pass -s to generate signed ota.
 - dirty:      Run a dirty build.Mandatory to run lunch prior to it's execution.
-              Optionally pass "q" to run silently.
+              Optionally pass -q to run silently.
 - sign:       Sign apps and generate signed ota.Execute only after lunch.
-              Optionally pass "q" to run silently.
+              Optionally pass -q to run silently.
 - search:     Search in every file in the build directory for a string given as an argument.Uses xargs for parallel search.
-- reposync:   Sync repo with the following params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.Pass f to force-sync
+- reposync:   Sync repo with the following params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.
+              Optionally pass -f to force-sync
 
 If run quietly, logs will be available in ${ANDROID_BUILD_TOP}/buildlog.
 EOF
@@ -41,21 +42,21 @@ function launch() {
     cleanup
     lunch krypton_$1-$2
     dirty
-  elif [ $3 == "q" ] ; then
-    cleanup q
+  elif [ $3 == "-q" ] ; then
+    cleanup
     lunch krypton_$1-$2 &>> buildlog
-    dirty q
+    dirty -q
     if [ ! -z $4 ] ; then
-      if [ $4 == "sign" ] ; then
-        sign q
+      if [ $4 == "-s" ] ; then
+        sign -q
       else
-        echo "Error: expected argument \"sign\", provided \"$3\""
+        echo "Error: expected argument \"-s\", provided \"$3\""
       fi
     fi
-  elif [ $3 == "sign" ] ; then
+  elif [ $3 == "-s" ] ; then
     sign
   else
-    echo "Error: expected argument \"q\" or \"sign\", provided \"$3\""
+    echo "Error: expected argument \"-q\" or \"-s\", provided \"$3\""
     return
   fi
 }
@@ -68,11 +69,11 @@ function dirty() {
   local start_time=$(date "+%s")
   if [ -z $1 ] ; then
     make -j$(nproc --all) target-files-package otatools
-  elif [ $1 == "q" ] ; then
+  elif [ $1 == "-q" ] ; then
     echo "Info: running full build......"
     make -j$(nproc --all) target-files-package otatools &>> buildlog
   else
-    echo "Error: expected argument \"q\", provided \"$1\""
+    echo "Error: expected argument \"-q\", provided \"$1\""
     return
   fi
   echo -e "\nInfo: make finished in $(timer $start_time $(date "+%s"))"
@@ -93,7 +94,7 @@ function sign() {
     if [ $? -eq 0 ] ; then
       $OTATOOLS/ota_from_target_files -k $CERTS/releasekey -p $COMMONTOOLS -v --block signed-target_files.zip signed-ota.zip
     fi
-  elif [ $1 == "q" ] ; then
+  elif [ $1 == "-q" ] ; then
     echo "Info: signing build......"
     $OTATOOLS/sign_target_files_apks -o -d $CERTS -p $COMMONTOOLS -v $TFI/*target_files*.zip signed-target_files.zip &>> buildlog
     if [ $? -eq 0 ] ; then
@@ -111,7 +112,7 @@ function sign() {
       return
     fi
   else
-    echo "Error: expected argument \"q\", provided \"$1\""
+    echo "Error: expected argument \"-q\", provided \"$1\""
     return
   fi
   echo -e "\nInfo: ota generated in $(timer $start_time $(date "+%s"))"
@@ -137,9 +138,9 @@ function search() {
 function reposync() {
   if [ -z $1 ] ; then
     repo sync -j$(nproc --all) --no-clone-bundle --no-tags --current-branch
-  elif [ $1 == "f" ] ; then
+  elif [ $1 == "-f" ] ; then
     repo sync -j$(nproc --all) --no-clone-bundle --no-tags --current-branch --force-sync
   else
-    echo "Error: expected argument \"f\", provided \"$1\""
+    echo "Error: expected argument \"-f\", provided \"$1\""
   fi
 }
