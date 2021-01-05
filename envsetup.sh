@@ -224,6 +224,14 @@ function sign() {
 }
 
 function codex() {
+  if [ -z $1 ] ; then
+    echo "Error: must provide a build variant"
+    return 1
+  elif [ $1 != "eng" ] && [ $1 != "userdebug" ] && [ "$1" != "user" ] ; then
+    echo "Error: expected argument 'eng' 'userdebug' 'user', provided '$1'"
+    return 1
+  fi
+
   if [ -f signed-ota.zip ] ; then
     mv signed-ota.zip KryptoN-OFFICIAL-A11-$KRYPTON_BUILD-$(date "+%Y%d%m")-${1}.zip
     echo "Now flash that shit and feel the kryptonian power"
