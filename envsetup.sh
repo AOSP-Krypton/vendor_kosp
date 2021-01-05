@@ -135,8 +135,9 @@ function search() {
 }
 
 function reposync() {
-  repo sync -j$(nproc --all) --no-clone-bundle --no-tags --current-branch
-  if [ -! -z $1 ] && [ $1 == "f" ] ; then
+  if [ -z $1 ] ; then
+    repo sync -j$(nproc --all) --no-clone-bundle --no-tags --current-branch
+  elif [ $1 == "f" ] ; then
     repo sync -j$(nproc --all) --no-clone-bundle --no-tags --current-branch --force-sync
   else
     echo "Error: expected argument \"f\", provided \"$1\""
