@@ -55,7 +55,7 @@ function start_extraction() {
       if [[ $line == *"#"* ]] ; then
         echo $line
       else
-        # Import blob
+        # Blobs to import
         if [[ $line == -* ]] ; then
           line=$(echo $line | sed 's/-//')
           # Apks, jars, libs
@@ -68,10 +68,12 @@ function start_extraction() {
                 libArray+=($line)
             fi
           fi
+        else
+          # Just copy blobs
+          write_to_makefiles $line
         fi
-        # Extract the blob from device
-        extract_blob $line
-        write_to_makefiles $line
+      # Extract the blob from device
+      extract_blob $line
       fi
     fi
   done < $BLOBS_LIST
