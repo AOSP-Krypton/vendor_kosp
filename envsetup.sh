@@ -148,7 +148,10 @@ function launch() {
   if $sign ; then
     sign
   fi
-  codex $2
+  
+  if [ $? -eq 0 ] ; then
+    codex $2
+  fi
   return $?
 }
 
