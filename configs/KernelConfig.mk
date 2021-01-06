@@ -33,7 +33,7 @@ KRYPTON_TOOLS := $(PREBUILTS_COMMON)/krypton-tools
 CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/clang-r383902b/bin
 HOST_GCC_TOOLCHAIN := $(PREBUILTS_COMMON)/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/bin
 PATH_OVERRIDE := PATH=$(KRYPTON_TOOLS)/linux-x86/bin:$$PATH
-MAKE := $(PREBUILTS_COMMON)/build-tools/linux-x86/bin/$(MAKE)
+MAKE := $(PREBUILTS_COMMON)/build-tools/linux-x86/bin/make -j$(shell $(KRYPTON_TOOLS)/linux-x86/bin/nproc --all)
 
 DTC := $(HOST_OUT_EXECUTABLES)/dtc$(HOST_EXECUTABLE_SUFFIX)
 UFDT_APPLY_OVERLAY := $(HOST_OUT_EXECUTABLES)/ufdt_apply_overlay$(HOST_EXECUTABLE_SUFFIX)
