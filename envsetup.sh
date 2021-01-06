@@ -65,7 +65,7 @@ function launch() {
   # Check if product is officially supported
   for product in ${krypton_products[@]} ; do
     if [ $1 == $product ] ; then
-      echo "Info: $product is officially supported"
+      echo "Info: $1 is officially supported"
       args=()
       local temp=($*)
       for tmp in ${temp[@]} ; do
@@ -75,7 +75,7 @@ function launch() {
       done
       break
     else
-      echo "Error: $product is not officially supported"
+      echo "Error: $1 is not officially supported"
       return 1
     fi
   done
