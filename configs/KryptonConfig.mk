@@ -1,1 +1,2 @@
-include vendor/krypton/configs/KernelConfig.mk
+# Kernel
+include vendor/krypton/configs/KryptonKernel.mk

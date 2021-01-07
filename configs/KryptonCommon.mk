@@ -7,7 +7,7 @@ ifeq ($(GAPPS_BUILD),true)
 GAPPS_VARIANT := nano
 $(call inherit-product, vendor/opengapps/build/opengapps-packages.mk)
 GAPPS_PRODUCT_PACKAGES += \
-  Chrome \
+  	Chrome \
 	PrebuiltBugle \
 	CalculatorGoogle \
 	GoogleContacts \

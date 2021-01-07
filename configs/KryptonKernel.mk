@@ -14,6 +14,9 @@ PREBUILTS_COMMON := $(TEMP_TOP)/prebuilts
 # AndroidKernel.mk needs KERNEL_DEFCONFIG
 KERNEL_DEFCONFIG := $(strip $(TARGET_KERNEL_DEFCONFIG))
 
+# Set this for caf hals
+TARGET_COMPILE_WITH_MSM_KERNEL := true
+
 ifeq ($(TARGET_KERNEL_ARCH),)
 TARGET_KERNEL_ARCH := arm64
 endif
