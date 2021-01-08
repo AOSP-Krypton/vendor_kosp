@@ -145,10 +145,11 @@ function launch() {
     lunch krypton_$1-$2
     dirty
   fi
-  if $sign ; then
-    sign
+  if [ $? -eq 0 ] ; then
+    if $sign ; then
+      sign
+    fi
   fi
-  
   if [ $? -eq 0 ] ; then
     codex $2
   fi
