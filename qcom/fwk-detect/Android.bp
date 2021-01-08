@@ -1,0 +1,24 @@
+cc_library_shared {
+    name: "libqti_vndfwk_detect",
+    srcs: ["vndfwk-detect.c"],
+    shared_libs: ["libcutils"],
+    vendor: true,
+    export_include_dirs: ["."],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}
+
+cc_test {
+    name: "vndfwk-test",
+    srcs: ["vndfwk-test.c"],
+    shared_libs: ["libqti_vndfwk_detect"],
+    vendor: true,
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+}
