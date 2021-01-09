@@ -24,3 +24,6 @@ GAPPS_FORCE_MMS_OVERRIDES := true
 GAPPS_FORCE_DIALER_OVERRIDES := true
 GAPPS_PACKAGE_OVERRIDES := LatinImeGoogle
 endif
+
+# Sepolicy
+include vendor/krypton/sepolicy/KryptonSepolicy.mk
