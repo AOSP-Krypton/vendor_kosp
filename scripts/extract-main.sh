@@ -35,7 +35,13 @@ else
 fi
 
 # Wipe existing blobs directory and create necessary files
-rm -rf $BLOBS_PATH && mkdir -p ${BLOBS_PATH}
+# First check if the directory is already a git repo, if so then do not wipe git metadata
+git -C $BLOBS_PATH rev-parse 2>/dev/null
+if [ $? -eq 0 ] ; then
+  rm -rf $BLOBS_PATH/*.* $BLOBS_PATH/system $BLOBS_PATH/vendor
+else
+  rm -rf $BLOBS_PATH && mkdir -p ${BLOBS_PATH}
+fi
 echo -ne "PRODUCT_SOONG_NAMESPACES += vendor/${VENDOR}/${DEVICE}\n\nPRODUCT_COPY_FILES += " > $MKFILE
 echo -e "soong_namespace {\n}" > ${BLOBS_PATH}/Android.bp
 
