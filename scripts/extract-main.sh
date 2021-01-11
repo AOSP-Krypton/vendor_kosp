@@ -137,18 +137,7 @@ function write_lib_bp() {
     check_elf_files: false,
     prefer: true," >> ${BLOBS_PATH}/Android.bp
 
-  if [[ $1 == *"system/product/"* ]] ; then
-    echo -e "
-    product_specific: true,
-}" >> ${BLOBS_PATH}/Android.bp
-  elif [[ $1 == *"system/"* ]] ; then
-    echo -e "
-}" >> ${BLOBS_PATH}/Android.bp
-  else
-    echo -e "
-    soc_specific: true,
-}" >> ${BLOBS_PATH}/Android.bp
-  fi
+  which_partition $1
 }
 
 function write_app_bp() {
@@ -167,19 +156,7 @@ function write_app_bp() {
     echo -ne "
     privileged: true," >> ${BLOBS_PATH}/Android.bp
   fi
-
-  if [[ $1 == *"system/product/"* ]] ; then
-    echo -e "
-    product_specific: true,
-}" >> ${BLOBS_PATH}/Android.bp
-  elif [[ $1 == *"system/"* ]] ; then
-    echo -e "
-}" >> ${BLOBS_PATH}/Android.bp
-  else
-    echo -e "
-    soc_specific: true,
-}" >> ${BLOBS_PATH}/Android.bp
-  fi
+  which_partition $1
 }
 
 function write_dex_bp() {
@@ -190,18 +167,7 @@ function write_dex_bp() {
     owner: \"$VENDOR\",
     jars: [\"$1\"]," >> ${BLOBS_PATH}/Android.bp
 
-    if [[ $1 == *"system/product/"* ]] ; then
-      echo -e "
-      product_specific: true,
-  }" >> ${BLOBS_PATH}/Android.bp
-    elif [[ $1 == *"system/"* ]] ; then
-      echo -e "
-  }" >> ${BLOBS_PATH}/Android.bp
-    else
-      echo -e "
-      soc_specific: true,
-  }" >> ${BLOBS_PATH}/Android.bp
-    fi
+  which_partition $1
 }
 
 # Write rules to copy out blobs
@@ -229,6 +195,25 @@ function write_packages() {
     echo -ne "\\" >> $MKFILE
     echo -ne "\n\t$packageName " >> $MKFILE
   done
+}
+
+function which_partition() {
+  if [[ $1 == *"system/product/"* ]] ; then
+    echo -e "
+    product_specific: true,
+}" >> ${BLOBS_PATH}/Android.bp
+  elif [[ $1 == *"system/system_ext/"* ]] ; then
+    echo -e "
+    system_ext_specific: true,
+}" >> ${BLOBS_PATH}/Android.bp
+  elif [[ $1 == *"system/"* ]] ; then
+    echo -e "
+}" >> ${BLOBS_PATH}/Android.bp
+  else
+    echo -e "
+    soc_specific: true,
+}" >> ${BLOBS_PATH}/Android.bp
+  fi
 }
 
 # Everything starts here
