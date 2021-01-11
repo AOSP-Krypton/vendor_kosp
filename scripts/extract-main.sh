@@ -113,62 +113,89 @@ function import_dex() {
 function write_lib_bp() {
   local moduleName=${1##*/}
   moduleName=${moduleName%.*}
-  echo -e "\ncc_prebuilt_library_shared {
-  name: \"$moduleName\",
-  owner: \"$VENDOR\",
-  strip: {\n\t\tnone: true,\n\t},
-  target: {\n\t\tandroid_arm: {\n\t\t\tsrcs: [\"${1}\"],\n\t\t},\n\t\tandroid_arm64: {\n\t\t\tsrcs: [\"${1}\"],\n\t\t},\n\t},
-  compile_multilib: \"both\",
-  check_elf_files: false,
-  prefer: true," >> ${BLOBS_PATH}/Android.bp
+  echo -ne "\ncc_prebuilt_library_shared {
+    name: \"$moduleName\",
+    owner: \"$VENDOR\",
+    strip: {
+        none: true,
+    },
+    target: {
+        android_arm: {
+            srcs: [\"${1}\"],
+        },
+        android_arm64: {
+            srcs: [\"${1}\"],
+        },
+    },
+    compile_multilib: \"both\",
+    check_elf_files: false,
+    prefer: true," >> ${BLOBS_PATH}/Android.bp
 
   if [[ $1 == *"system/product/"* ]] ; then
-    echo -e "\tproduct_specific: true,\n}" >> ${BLOBS_PATH}/Android.bp
+    echo -e "
+    product_specific: true,
+}" >> ${BLOBS_PATH}/Android.bp
   elif [[ $1 == *"system/"* ]] ; then
-    echo -e "}" >> ${BLOBS_PATH}/Android.bp
+    echo -e "
+}" >> ${BLOBS_PATH}/Android.bp
   else
-    echo -e "\tsoc_specific: true,\n}" >> ${BLOBS_PATH}/Android.bp
+    echo -e "
+    soc_specific: true,
+}" >> ${BLOBS_PATH}/Android.bp
   fi
 }
 
 function write_app_bp() {
   local moduleName=${1##*/}
   moduleName=${moduleName%.*}
-  echo -e "\nandroid_app_import {
-  name: \"$moduleName\",
-  owner: \"$VENDOR\",
-  apk: \"$1\",
-  certificate: \"platform\",
-  dex_preopt: {\n\t\tenabled: false,\n\t}," >> ${BLOBS_PATH}/Android.bp
+  echo -ne "\nandroid_app_import {
+    name: \"$moduleName\",
+    owner: \"$VENDOR\",
+    apk: \"$1\",
+    certificate: \"platform\",
+    dex_preopt: {
+        enabled: false,
+    }," >> ${BLOBS_PATH}/Android.bp
 
   if [[ $1 == *"priv-app"* ]] ; then
-    echo -e "\tprivileged: true," >> ${BLOBS_PATH}/Android.bp
+    echo -ne "
+    privileged: true," >> ${BLOBS_PATH}/Android.bp
   fi
 
   if [[ $1 == *"system/product/"* ]] ; then
-    echo -e "\tproduct_specific: true,\n}" >> ${BLOBS_PATH}/Android.bp
+    echo -e "
+    product_specific: true,
+}" >> ${BLOBS_PATH}/Android.bp
   elif [[ $1 == *"system/"* ]] ; then
-    echo -e "}" >> ${BLOBS_PATH}/Android.bp
+    echo -e "
+}" >> ${BLOBS_PATH}/Android.bp
   else
-    echo -e "\tsoc_specific: true,\n}" >> ${BLOBS_PATH}/Android.bp
+    echo -e "
+    soc_specific: true,
+}" >> ${BLOBS_PATH}/Android.bp
   fi
 }
 
 function write_dex_bp() {
   local moduleName=${1##*/}
   moduleName=${moduleName%.*}
-  echo -e "\ndex_import {
-  name: \"$moduleName\",
-  owner: \"$VENDOR\",
-  jars: [\"$1\"]," >> ${BLOBS_PATH}/Android.bp
+  echo -ne "\ndex_import {
+    name: \"$moduleName\",
+    owner: \"$VENDOR\",
+    jars: [\"$1\"]," >> ${BLOBS_PATH}/Android.bp
 
-  if [[ $1 == *"system/product/"* ]] ; then
-    echo -e "\tproduct_specific: true,\n}" >> ${BLOBS_PATH}/Android.bp
-  elif [[ $1 == *"system/"* ]] ; then
-    echo -e "}" >> ${BLOBS_PATH}/Android.bp
-  else
-    echo -e "\tsoc_specific: true,\n}" >> ${BLOBS_PATH}/Android.bp
-  fi
+    if [[ $1 == *"system/product/"* ]] ; then
+      echo -e "
+      product_specific: true,
+  }" >> ${BLOBS_PATH}/Android.bp
+    elif [[ $1 == *"system/"* ]] ; then
+      echo -e "
+  }" >> ${BLOBS_PATH}/Android.bp
+    else
+      echo -e "
+      soc_specific: true,
+  }" >> ${BLOBS_PATH}/Android.bp
+    fi
 }
 
 # Write rules to copy out blobs
