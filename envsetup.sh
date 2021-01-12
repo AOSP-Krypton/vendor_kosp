@@ -63,9 +63,10 @@ function launch() {
   fi
 
   # Check if product is officially supported
+  hit=0
   for product in ${krypton_products[@]} ; do
     if [ $1 == $product ] ; then
-      echo "Info: $1 is officially supported"
+      echo "Info: device $1 is officially supported"
       args=()
       local temp=($*)
       for tmp in ${temp[@]} ; do
@@ -73,12 +74,15 @@ function launch() {
           args+=($tmp)
         fi
       done
+      hit=$(expr $hit + 1)
       break
-    else
-      echo "Error: $1 is not officially supported"
-      return 1
     fi
   done
+
+  # Show a warning for unofficial devices
+  if [ $hit -eq 0 ] ; then
+    echo "Warning: device $1 is not officially supported,you might not be able to complete the build successfully"
+  fi
 
   # Check if passed build variant is valid
   for varnt in ${variant[@]} ; do
@@ -103,6 +107,7 @@ function launch() {
   cleanup
 
   # Evaluating rest of the arguments:
+  hit=0
   for optarg in ${opt_args[@]} ; do
     for arg in ${args[@]} ; do
       if [ $arg == $optarg ] ; then
