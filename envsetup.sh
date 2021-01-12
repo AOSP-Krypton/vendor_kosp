@@ -20,7 +20,7 @@ Krypton specific functions:
 - codex:      Rename the signed ota with proper info.Pass the build variant as an argument.
 - search:     Search in every file in the current directory for a string given as an argument.Uses xargs for parallel search.
 - reposync:   Sync repo with the following params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.
-              Optionally pass -f for --force-sync
+              Optionally pass -f for --force-sync.
 
 If run quietly, logs will be available in ${ANDROID_BUILD_TOP}/buildlog.
 EOF
@@ -257,13 +257,10 @@ function search() {
 
 function reposync() {
   local SYNC_ARGS="--no-clone-bundle --no-tags --current-branch"
-  if [ -z $1 ] ; then
-    repo sync -j$(nproc --all) $SYNC_ARGS
-  elif [ $1 == "-f" ] ; then
+  if [ $1 == "-f" ] ; then
     repo sync -j$(nproc --all) $SYNC_ARGS --force-sync
   else
-    echo "Error: expected argument \"-f\", provided \"$1\""
-    return 1
+    repo sync -j$(nproc --all) $SYNC_ARGS $*
   fi
   return $?
 }
