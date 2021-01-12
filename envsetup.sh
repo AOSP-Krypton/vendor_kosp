@@ -2,6 +2,7 @@
 
 # List of officially supported products
 krypton_products=("guacamole")
+official=false
 
 function krypton_help() {
 cat <<EOF
@@ -17,7 +18,7 @@ Krypton specific functions:
               Optionally pass -q to run silently.
 - sign:       Sign and build ota.Execute only after a build.
               Optionally pass -q to run silently.
-- codex:      Rename the signed ota with proper info.Pass the build variant as an argument.
+- zipup:      Rename the signed ota with proper info.Pass the build variant as an argument.
 - search:     Search in every file in the current directory for a string given as an argument.Uses xargs for parallel search.
 - reposync:   Sync repo with the following params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.
               Optionally pass -f for --force-sync.
@@ -66,7 +67,7 @@ function launch() {
   hit=0
   for product in ${krypton_products[@]} ; do
     if [ $1 == $product ] ; then
-      echo "Info: device $1 is officially supported"
+      official=true
       args=()
       local temp=($*)
       for tmp in ${temp[@]} ; do
@@ -78,11 +79,6 @@ function launch() {
       break
     fi
   done
-
-  # Show a warning for unofficial devices
-  if [ $hit -eq 0 ] ; then
-    echo "Warning: device $1 is not officially supported,you might not be able to complete the build successfully"
-  fi
 
   # Check if passed build variant is valid
   for varnt in ${variant[@]} ; do
@@ -102,9 +98,6 @@ function launch() {
     echo "Error: valid build variants are 'user' 'userdebug' 'eng', provided '$2'"
     return 1
   fi
-
-  # Basic check passed, hence proceeding to cleaning.
-  cleanup
 
   # Evaluating rest of the arguments:
   hit=0
@@ -143,33 +136,43 @@ function launch() {
 
   # Execute rest of the commands now as all vars are set.
   if $quiet ; then
+    # Show official or unofficial status
+    if $official ; then
+      echo "Info: device $1 is officially supported by kosp"
+    else
+      echo "Warning: device $1 is not officially supported,you might not be able to complete the build successfully"
+    fi
+    cleanup
     echo "Info: Starting build for $1"
     lunch krypton_$1-$2 &>> buildlog
     dirty -q
   else
+    rm -rf *.zip buildlog
+    make clean
     lunch krypton_$1-$2
     dirty
   fi
   if [ $? -eq 0 ] ; then
+    echo $?
     if $sign ; then
       sign
     fi
   fi
   if [ $? -eq 0 ] ; then
-    codex $2
+    zipup $2
   fi
   return $?
 }
 
 function dirty() {
-  if [ -z $KRYPTON_BUILD ] ; then
-    echo "Error: Target device not found ,have you run lunch?"
-    return 1
-  fi
   local start_time=$(date "+%s")
   if [ -z $1 ] ; then
     make -j$(nproc --all) target-files-package otatools
   elif [ $1 == "-q" ] ; then
+    if [ -z $KRYPTON_BUILD ] ; then
+      echo "Error: Target device not found ,have you run lunch?"
+      return 1
+    fi
     echo "Info: running make......"
     make -j$(nproc --all) target-files-package otatools  &>> buildlog
   else
@@ -183,15 +186,7 @@ function dirty() {
 }
 
 function sign() {
-  if [ -z $KRYPTON_BUILD ] ; then
-    echo "Error: target device not found,have you run lunch?"
-    return 1
-  fi
-  tfi="$OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip"
-  if [ ! -f $tfi ] ; then
-    echo "Error: target files zip not found,was make successfull?"
-    return 1
-  fi
+  local tfi="$OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip"
   local apksign="./build/tools/releasetools/sign_target_files_apks -o -d $ANDROID_BUILD_TOP/certs \
                 -p out/host/linux-x86 -v $tfi signed-target_files.zip"
 
@@ -206,6 +201,13 @@ function sign() {
       $buildota
     fi
   elif [ $1 == "-q" ] ; then
+    if [ -z $KRYPTON_BUILD ] ; then
+      echo "Error: target device not found,have you run lunch?"
+      return 1
+    elif [ ! -f $tfi ] ; then
+      echo "Error: target files zip not found,was make successfull?"
+      return 1
+    fi
     echo "Info: signing build......"
     $apksign &>> buildlog
     if [ $? -eq 0 ] ; then
@@ -232,22 +234,32 @@ function sign() {
   return $?
 }
 
-function codex() {
+function zipup() {
+  # Version info
+  versionMajor=1
+  versionMinor=0
+  version="v$versionMajor.$versionMinor"
+
+  # test for proper arguments and check if ota is present
   if [ -z $1 ] ; then
     echo "Error: must provide a build variant"
     return 1
   elif [ $1 != "eng" ] && [ $1 != "userdebug" ] && [ "$1" != "user" ] ; then
     echo "Error: expected argument 'eng' 'userdebug' 'user', provided '$1'"
     return 1
-  fi
-
-  if [ -f signed-ota.zip ] ; then
-    mv signed-ota.zip KryptoN-OFFICIAL-A11-$KRYPTON_BUILD-$(date "+%Y%d%m")-${1}.zip
-    echo "Now flash that shit and feel the kryptonian power"
-  else
+  elif [ ! -f signed-ota.zip ] ; then
     echo "Error: ota not found"
     return 1
   fi
+
+  # Rename the ota with proper version info and timestamp
+  if $official ; then
+    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-OFFICIAL-$(date "+%Y%d%m")-${1}.zip
+  else
+    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-UNOFFICIAL-$(date "+%Y%d%m")-${1}.zip
+  fi
+  echo "Now flash that shit and feel the kryptonian power"
+  return $?
 }
 
 function search() {
