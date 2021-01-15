@@ -153,7 +153,6 @@ function launch() {
     dirty
   fi
   if [ $? -eq 0 ] ; then
-    echo $?
     if $sign ; then
       sign
     fi
