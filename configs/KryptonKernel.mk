@@ -35,7 +35,10 @@ KERNEL_LLVM_SUPPORT := true
 KRYPTON_TOOLS := $(PREBUILTS_COMMON)/krypton-tools
 CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/clang-r383902b/bin
 HOST_GCC_TOOLCHAIN := $(PREBUILTS_COMMON)/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/bin
-PATH_OVERRIDE := PATH=$(KRYPTON_TOOLS)/linux-x86/bin:$$PATH
+PATH_OVERRIDE := \
+    PATH=$(KRYPTON_TOOLS)/linux-x86/bin:$(CLANG_TOOLCHAIN):$$PATH \
+    PERL5LIB=$(KRYPTON_TOOLS)/common/perl-base
+
 MAKE := $(PREBUILTS_COMMON)/build-tools/linux-x86/bin/make -j$(shell $(KRYPTON_TOOLS)/linux-x86/bin/nproc --all)
 
 DTC := $(HOST_OUT_EXECUTABLES)/dtc$(HOST_EXECUTABLE_SUFFIX)
@@ -49,6 +52,7 @@ TARGET_KERNEL_MAKE_ENV += HOSTAR=$(HOST_GCC_TOOLCHAIN)/x86_64-linux-ar
 TARGET_KERNEL_MAKE_ENV += HOSTLD=$(HOST_GCC_TOOLCHAIN)/x86_64-linux-ld
 TARGET_KERNEL_MAKE_ENV += HOSTCFLAGS="-I/usr/include -I/usr/include/x86_64-linux-gnu -L/usr/lib -L/usr/lib/x86_64-linux-gnu -fuse-ld=lld"
 TARGET_KERNEL_MAKE_ENV += HOSTLDFLAGS="-L/usr/lib -L/usr/lib/x86_64-linux-gnu -fuse-ld=lld"
+TARGET_KERNEL_MAKE_ENV += LD=ld.lld NM=llvm-nm OBJCOPY=llvm-objcopy
 TARGET_KERNEL_MAKE_ENV += $(PATH_OVERRIDE)
 TARGET_KERNEL_DISABLE_DEBUGFS := true
 
