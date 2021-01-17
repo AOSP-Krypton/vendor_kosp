@@ -1,4 +1,4 @@
-// kryptonOS soong configs
+// krypton soong configs
 
 bootstrap_go_package {
     name: "soong-krypton-generator",
