@@ -51,6 +51,7 @@ function timer() {
 }
 
 function cleanup() {
+  croot
   echo "Info: cleaning build directory...."
   make clean &> /dev/null
   rm -rf *.zip buildlog
@@ -148,6 +149,8 @@ function launch() {
   fi
   export GAPPS_BUILD
 
+  croot
+
   # Execute rest of the commands now as all vars are set.
   if $quiet ; then
     # Show official or unofficial status
@@ -178,6 +181,7 @@ function launch() {
 }
 
 function dirty() {
+  croot
   local start_time=$(date "+%s")
   if [ -z $1 ] ; then
     make -j$(nproc --all) target-files-package otatools
@@ -199,6 +203,7 @@ function dirty() {
 }
 
 function sign() {
+  croot
   local tfi="$OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip"
   local apksign="./build/tools/releasetools/sign_target_files_apks -o -d $ANDROID_BUILD_TOP/certs \
                 -p out/host/linux-x86 -v $tfi signed-target_files.zip"
@@ -248,6 +253,7 @@ function sign() {
 }
 
 function zipup() {
+  croot
   # Version info
   versionMajor=1
   versionMinor=0
