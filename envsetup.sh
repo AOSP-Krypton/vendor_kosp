@@ -50,6 +50,24 @@ function timer() {
   echo "$hr:$min:$sec"
 }
 
+# Internal function to pop argument from a set of args
+function popit() {
+  local args=($*)
+  local temp=()
+  local indx=$(expr $# - 1)
+  local pop="${args[$indx]}"
+  for ((i = 0 ; i < $indx ; i++)) ; do
+    temp+=(${args[i]})
+  done
+  result=()
+  for tmp in ${temp[@]} ; do
+    if [ ! $tmp == $pop ] ; then
+      result+=($tmp)
+    fi
+  done
+  echo "${result[@]}"
+}
+
 function cleanup() {
   croot
   echo "Info: cleaning build directory...."
@@ -60,7 +78,8 @@ function cleanup() {
 }
 
 function launch() {
-  local args=($*)
+  local args=()
+  local temp=($*)
   local opt_args=("-q" "-s" "-g")
   local variant=("user" "userdebug" "eng")
   local flag=false
@@ -83,29 +102,20 @@ function launch() {
   for product in ${krypton_products[@]} ; do
     if [ $1 == $product ] ; then
       official=true
-      args=()
-      local temp=($*)
-      for tmp in ${temp[@]} ; do
-        if [ ! $tmp == $1 ] ; then
-          args+=($tmp)
-        fi
-      done
       hit=$(expr $hit + 1)
       break
     fi
   done
 
+  # Remove product name from args
+  args=($(popit "${temp[@]}" $1))
+  temp=("${args[@]}")
+  args=()
+
   # Check if passed build variant is valid
   for varnt in ${variant[@]} ; do
     if [ $2 == $varnt ] ; then
       flag=true
-      local temp=("${args[@]}")
-      args=()
-      for tmp in ${temp[@]} ; do
-        if [ ! $tmp == $2 ] ; then
-          args+=($tmp)
-        fi
-      done
       break
     fi
   done
@@ -113,6 +123,10 @@ function launch() {
     echo "Error: valid build variants are 'user' 'userdebug' 'eng', provided '$2'"
     return 1
   fi
+
+  # Remove build variant from args
+  args=($(popit "${temp[@]}" $2))
+  temp=()
 
   # Evaluating rest of the arguments:
   hit=0
