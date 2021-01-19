@@ -283,7 +283,7 @@ function zipup() {
 
 function search() {
   if [ ! -z $1 ] ; then
-    find . -type f -print0 | xargs -0 -P $(nproc --all) grep $1
+    find . -type f -print0 | xargs -0 -P $(nproc --all) grep "$*"
   else
     echo "Error: please provide a string to search"
     return 1
