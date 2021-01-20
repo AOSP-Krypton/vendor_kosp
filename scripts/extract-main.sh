@@ -63,6 +63,7 @@ echo -e "soong_namespace {\n}" > ${BLOBS_PATH}/Android.bp
 appArray=()
 dexArray=()
 libArray=()
+xmlArray=()
 packageArray=()
 
 # Main function to extract
@@ -79,10 +80,12 @@ function start_extraction() {
         if [[ $line == -* ]] ; then
           line=$(echo $line | sed 's/-//')
           # Apks, jars, libs
-          if [[ $line == *"apk"* ]] ; then
+          if [[ $line == *".apk"* ]] ; then
             appArray+=($line)
-          elif [[ $line == *"jar"* ]] ; then
+          elif [[ $line == *".jar"* ]] ; then
             dexArray+=($line)
+          elif [[ $line == *".xml"* ]] ; then
+            xmlArray+=($line)
           else
             if [[ $line == *"lib64"* ]] ; then
                 libArray+=($line)
@@ -127,6 +130,14 @@ function import_dex() {
   for dex in ${dexArray[@]}; do
     write_dex_bp $dex
     packageArray+=($dex)
+  done
+}
+
+# Import xml to Android.bp
+function import_xml() {
+  for xml in ${xmlArray[@]}; do
+    write_xml_bp $xml
+    packageArray+=($xml)
   done
 }
 
@@ -184,6 +195,19 @@ function write_dex_bp() {
   which_partition $1
 }
 
+function write_xml_bp() {
+  local moduleName=${1##*/}
+  moduleName=${moduleName%.*}
+  echo -ne "\nprebuilt_etc_xml {
+    name: \"$moduleName\",
+    owner: \"$VENDOR\",
+    src: \"$1\",
+    filename_from_src: true,
+    sub_dir: \"vintf/manifest\"," >> ${BLOBS_PATH}/Android.bp
+
+  which_partition $1
+}
+
 # Write rules to copy out blobs
 function write_to_makefiles() {
   local path=${1#*/}
@@ -235,4 +259,5 @@ start_extraction
 import_lib
 import_app
 import_dex
+import_xml
 write_packages
