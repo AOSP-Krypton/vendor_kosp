@@ -28,6 +28,7 @@ Krypton specific functions:
               Optionally pass -q to run silently.
               Optionally pass -s to generate signed ota.
               Optionallt pass -g to build gapps variant.
+              Optionallt pass -n to not clean build directory.
 - dirty:      Run a dirty build.Mandatory to run lunch prior to it's execution.
               Optionally pass -q to run silently.
 - sign:       Sign and build ota.Execute only after a build.
@@ -80,20 +81,21 @@ function cleanup() {
 function launch() {
   local args=()
   local temp=($*)
-  local opt_args=("-q" "-s" "-g")
+  local opt_args=("-q" "-s" "-g" "-n")
   local variant=("user" "userdebug" "eng")
   local flag=false
   local hit=0
   local quiet=false
   local sign=false
   local gapps=false
+  local nowipe=false
 
   # Check if enough arguments are passed to run launch
   if [ $# -lt 2 ] ; then
     echo "Error: please provide atleast target name and build variant"
     return
-  elif [ $# -gt 5 ] ; then
-    echo "Error: maximum expected arguments 5, provided $#"
+  elif [ $# -gt 6 ] ; then
+    echo "Error: maximum expected arguments 6, provided $#"
     return
   fi
 
@@ -146,6 +148,10 @@ function launch() {
           "-g")
             gapps=true
             ;;
+
+          "-n")
+            nowipe=true
+            ;;
         esac
       fi
     done
@@ -173,13 +179,18 @@ function launch() {
     else
       echo "Warning: device $1 is not officially supported,you might not be able to complete the build successfully"
     fi
-    cleanup
-    echo "Info: Starting build for $1"
-    lunch krypton_$1-$2 &>> buildlog
-    dirty -q
+    if ! $nowipe ; then
+      cleanup
+    else
+      echo "Info: Starting build for $1"
+      lunch krypton_$1-$2 &>> buildlog
+      dirty -q
+    fi
   else
-    rm -rf *.zip buildlog
-    make clean
+    if ! $nowipe ; then
+      rm -rf *.zip buildlog
+      make clean
+    fi
     lunch krypton_$1-$2
     dirty
   fi
