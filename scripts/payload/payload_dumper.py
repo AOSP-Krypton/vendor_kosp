@@ -15,6 +15,7 @@ except ImportError:
 import update_metadata_pb2 as um
 
 flatten = lambda l: [item for sublist in l for item in sublist]
+prev = 0
 
 def u32(x):
     return struct.unpack('>I', x)[0]
@@ -94,8 +95,9 @@ def data_for_op(op,out_file,old_file):
     return data
 
 def dump_part(part):
-    sys.stdout.write("Processing %s partition" % part.partition_name)
-    sys.stdout.flush()
+    global prev
+    prev = 0
+    print("Processing %s partition" % part.partition_name,end="")
 
     out_file = open('%s/%s.img' % (args.out, part.partition_name), 'wb')
     h = hashlib.sha256()
@@ -105,13 +107,28 @@ def dump_part(part):
     else:
         old_file = None
 
+    print("\t[",end="")
+    size=len(part.operations)
+    i=0
     for op in part.operations:
+        i=i+1
         data = data_for_op(op,out_file,old_file)
-        sys.stdout.write(".")
+        sys.stdout.write(update(i,size))
         sys.stdout.flush()
+    print("]")
 
-    print("Done")
-
+def update(i,size):
+    global prev
+    str=""
+    if size != 0:
+        percent=((i/size)*100)
+        if int(percent) > prev:
+            for y in range(int(percent - prev)):
+                str = str + "|"
+            prev=int(percent)
+            return str
+        else:
+            return ''
 
 parser = argparse.ArgumentParser(description='OTA payload dumper')
 parser.add_argument('payloadfile', type=argparse.FileType('rb'),
@@ -157,5 +174,5 @@ for part in dam.partitions:
 
     # extents = flatten([op.dst_extents for op in part.operations])
     # assert verify_contiguous(extents), 'operations do not span full image'
-
     dump_part(part)
+    print("")
