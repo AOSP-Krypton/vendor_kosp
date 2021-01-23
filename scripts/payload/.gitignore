@@ -1,6 +1,4 @@
-__pycache__
-output
-old
-*.bin
-*.zip
-*.img
+*
+!.gitignore
+!*.py
+!*.sh
