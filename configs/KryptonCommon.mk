@@ -25,7 +25,7 @@ ifeq ($(GAPPS_BUILD),true)
 GAPPS_VARIANT := nano
 $(call inherit-product, vendor/opengapps/build/opengapps-packages.mk)
 GAPPS_PRODUCT_PACKAGES += \
-  	Chrome \
+	Chrome \
 	PrebuiltBugle \
 	CalculatorGoogle \
 	GoogleContacts \
@@ -33,13 +33,15 @@ GAPPS_PRODUCT_PACKAGES += \
 	PrebuiltDeskClockGoogle \
 	WebViewGoogle \
 	CalendarGooglePrebuilt \
-	GoogleDialer
+	GoogleDialer \
+	PixelLauncher
 
 GAPPS_EXCLUDED_PACKAGES := Velvet
 GAPPS_FORCE_PACKAGE_OVERRIDES := true
 GAPPS_FORCE_WEBVIEW_OVERRIDES := true
 GAPPS_FORCE_MMS_OVERRIDES := true
 GAPPS_FORCE_DIALER_OVERRIDES := true
+GAPPS_FORCE_PIXEL_LAUNCHER := true
 GAPPS_PACKAGE_OVERRIDES := LatinImeGoogle
 endif
 
