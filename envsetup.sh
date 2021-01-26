@@ -95,12 +95,10 @@ function fetchrepos() {
     for val in ${list[i]}; do
       project+=($val)
     done
-    #echo ${project[@]}
     echo -e "\t<project ${project[@]} />" >> $manifest
   done
-  echo "</manifest>" >> $manifest
-  # Sync the repos
-  reposync
+  echo "</manifest>" >> $manifest # Manifest has been written
+  reposync # Sync the repos
 }
 
 function launch() {
@@ -110,7 +108,7 @@ function launch() {
   local quiet=false
   local sign=false
   local wipe=true
-  local STATUS="$?"
+  local GAPPS_BUILD=false
 
   # Add all officialy supported devices to an array
   local LIST="${ANDROID_BUILD_TOP}/vendor/krypton/products/products.list"
@@ -131,17 +129,19 @@ function launch() {
   # Check for build variant
   check_variant $1
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
+  variant=$1
   shift # Remove build variant from options
 
   while getopts ":qsgn" option; do
     case $option in
       q) quiet=true;;
       s) sign=true;;
-      g) export GAPPS_BUILD=true;;
+      g) GAPPS_BUILD=true;;
       n) wipe=false;;
      \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
     esac
   done
+  export GAPPS_BUILD # Set whether to include gapps in the rom
 
   # Execute rest of the commands now as all vars are set.
   if $quiet ; then
@@ -151,66 +151,36 @@ function launch() {
     else
       echo -e "${WARN}: device $device is not officially supported,you might not be able to complete the build successfully${NC}"
     fi
-    [ $wipe ] && cleanup
+    $wipe && cleanup
     echo -e "${INFO}: Starting build for $device ${NC}"
     lunch krypton_$device-$variant &>> buildlog
-    dirty -q
-    STATUS="$?"
+    [ $? -eq 0 ] && dirty -q
+    [ $? -eq 0 ] && $sign && sign -q && zipup $variant && return 0
   else
-    [ $wipe ] && rm -rf *.zip buildlog && make clean
+    $wipe && rm -rf *.zip buildlog && make clean
     lunch krypton_$device-$variant
-    dirty
-    STATUS="$?"
+    [ $? -eq 0 ] && dirty
+    [ $? -eq 0 ] && $sign && sign && zipup $variant && return 0
   fi
-
-  # Sign builds if make was successfull
-  if [ $STATUS -eq 0 ] ; then
-    if $sign ; then
-      if $quiet ; then
-        sign -q
-        STATUS=$?
-      else
-        sign
-        STATUS=$?
-      fi
-    fi
-  fi
-
-  # Rename the ota if sign was successfull
-  if [ $STATUS -eq 0 ] ; then
-    zipup $variant
-  fi
-  return $?
+  return 1
 }
 
 function dirty() {
   croot
-  local STATUS=$?
   if [ -z $1 ] ; then
-    make -j$(nproc --all) target-files-package otatools
-    STATUS=$?
+    make -j$(nproc --all) target-files-package otatools && return 0
   elif [ $1 == "-q" ] ; then
-    if [ -z $KRYPTON_BUILD ] ; then
-      echo -e "${ERROR}: Target device not found ,have you run lunch?${NC}"
-      return 1
-    fi
+    [ -z $KRYPTON_BUILD ] && echo -e "${ERROR}: Target device not found ,have you run lunch?${NC}" && return 1
     echo -e "${INFO}: running make....${NC}"
     local start=$(date "+%s")
     make -j$(nproc --all) target-files-package otatools  &>> buildlog
-    STATUS=$?
-    if [ $STATUS -eq 0 ] ; then
-      echo -e "\n${INFO}: make finished in $(timer $start $(date "+%s"))${NC}"
-    fi
+    [ $? -eq 0 ] && echo -e "\n${INFO}: make finished in $(timer $start $(date "+%s"))${NC}" && return 0
   else
-    echo -e "${ERROR}: expected argument \"-q\", provided \"$1\"${NC}"
-    STATUS="1"
+    echo -e "${ERROR}: expected argument \"-q\", provided \"$1\"${NC}" && return 1
   fi
-  return $STATUS
 }
 
 function sign() {
-  croot
-  local STATUS="$?"
   local tfi="$OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip"
   local apksign="./build/tools/releasetools/sign_target_files_apks -o -d $ANDROID_BUILD_TOP/certs \
                 -p out/host/linux-x86 -v $tfi signed-target_files.zip"
@@ -219,44 +189,29 @@ function sign() {
                   -p out/host/linux-x86 -v --block \
                   signed-target_files.zip signed-ota.zip"
 
+  croot
   if [ -z $1 ] ; then
-    $apksign
-    STATUS="$?"
-    if [ $STATUS -eq 0 ] ; then
-      $buildota
-      STATUS=$?
-    fi
+    $apksign && $buildota
   elif [ $1 == "-q" ] ; then
     local start=$(date "+%s")
     if [ -z $KRYPTON_BUILD ] ; then
-      echo -e "${ERROR}: target device not found,have you run lunch?${NC}"
-      STATUS=1 && return $STATUS
+      echo -e "${ERROR}: target device not found,have you run lunch?${NC}" && return 1
     elif [ ! -f $tfi ] ; then
-      echo -e "${ERROR}: target files zip not found,was make successfull?${NC}"
-      STATUS=1 && return $STATUS
+      echo -e "${ERROR}: target files zip not found,was make successfull?${NC}" && return 1
     fi
     echo -e "${INFO}: signing build......${NC}"
-    $apksign &>> buildlog; STATUS=$?
-    if [ $STATUS -eq 0 ] ; then
-      echo -e "${INFO}: done signing build${NC}"
-    else
-      echo -e "${ERROR}: failed to sign build!${NC}"
-      return $STATUS
-    fi
+    $apksign &>> buildlog
+    [ $? -ne 0 ] && echo -e "${ERROR}: failed to sign build!${NC}" && return 1
+    echo -e "${INFO}: done signing build${NC}"
     echo -e "${INFO}: generating ota package.....${NC}"
-    $buildota &>> buildlog; STATUS=$?
-    if [ $STATUS -eq 0 ] ; then
-      echo -e "${INFO}: signed ota built from target files package${NC}"
-      echo -e "${INFO}: ota generated in $(timer $start $(date "+%s"))${NC}"
-    else
-      echo -e "${ERROR}: failed to build ota!${NC}"
-      return $STATUS
-    fi
+    $buildota &>> buildlog
+    [ $? -ne 0 ] && echo -e "${ERROR}: failed to build ota!${NC}" && return 1
+    echo -e "${INFO}: signed ota built from target files package${NC}"
+    echo -e "${INFO}: ota generated in $(timer $start $(date "+%s"))${NC}"
+    return 0
   else
-    echo -e "${ERROR}: expected argument \"-q\", provided \"$1\"${NC}"
-    return 1
+    echo -e "${ERROR}: expected argument \"-q\", provided \"$1\"${NC}" && return 1
   fi
-  return $STATUS
 }
 
 function zipup() {
@@ -268,13 +223,8 @@ function zipup() {
 
   # Check build variant and check if ota is present
   check_variant $1
-  if [ $? -ne 0 ] ; then
-    echo -e "${ERROR}: must provide a valid build variant${NC}"
-    return 1
-  elif [ ! -f signed-ota.zip ] ; then
-    echo -e "${ERROR}: ota not found${NC}"
-    return 1
-  fi
+  [ $? -ne 0 ] && echo -e "${ERROR}: must provide a valid build variant${NC}" && return 1
+  [ ! -f signed-ota.zip ] && echo -e "${ERROR}: ota not found${NC}" && return 1
 
   # Rename the ota with proper version info and timestamp
   if $official ; then
@@ -283,17 +233,11 @@ function zipup() {
     mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-UNOFFICIAL-$(date "+%Y%d%m")-${1}.zip
   fi
   echo -e "${LTGREEN}Now flash that shit and feel the kryptonian power${NC}"
-  return $?
 }
 
 function search() {
-  if [ ! -z $1 ] ; then
-    find . -type f -print0 | xargs -0 -P $(nproc --all) grep "$*"
-  else
-    echo -e "${ERROR}: provide a string to search${NC}"
-    return 1
-  fi
-  return $?
+  [ -z $1 ] && echo -e "${ERROR}: provide a string to search${NC}" && return 1
+  find . -type f -print0 | xargs -0 -P $(nproc --all) grep "$*" && return 0
 }
 
 function reposync() {
