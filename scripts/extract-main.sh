@@ -29,23 +29,32 @@ BLOBS_LIST=${ANDROID_BUILD_TOP}/device/${VENDOR}/${DEVICE}/blobs.txt
 BLOBS_PATH=${ANDROID_BUILD_TOP}/vendor/${VENDOR}/${DEVICE}
 MKFILE=${BLOBS_PATH}/${DEVICE}-proprietary.mk
 
-# Check if adb exists
-if ! which adb > /dev/null ; then
-  echo "adb not found,please install adb and try again"
-  exit 1
-fi
+# Option to choose whether to use adb or copy from unpacked images
+[ -z $1 ] && echo -e "Error: must specify a valid method to use, given option is $1" && return 1
+method="$1"
 
-# Start adb
-echo "Waiting for device to come online"
-adb wait-for-device
-echo "Device online!"
+if [ $method == "adb" ] ; then
+  # Check if adb exists
+  if ! which adb > /dev/null ; then
+    echo "adb not found,please install adb and try again"
+    exit 1
+  fi
 
-# Check if adb is running as root
-if adb root | grep -q "running as root" ; then
-  echo "adb is running as root,proceeding with extraction"
+  # Start adb
+  echo "Waiting for device to come online"
+  adb wait-for-device
+  echo "Device online!"
+
+  # Check if adb is running as root
+  if adb root | grep -q "running as root" ; then
+    echo "adb is running as root,proceeding with extraction"
+  else
+    echo "adb is not running as root,aborting!"
+    exit 1
+  fi
 else
-  echo "adb is not running as root,aborting!"
-  exit 1
+  [ -d $2 ] || echo "Error: path '$2' does not exist" && return 1
+  blobroot="$2"
 fi
 
 # Wipe existing blobs directory and create necessary files
@@ -106,7 +115,16 @@ function start_extraction() {
 function extract_blob() {
   local blobPath=${1%/*}
   mkdir -p ${BLOBS_PATH}/${blobPath}
-  adb pull $1 ${BLOBS_PATH}/${blobPath}
+  if [ $method == "adb" ] ; then
+    adb pull $1 ${BLOBS_PATH}/${blobPath}
+  else
+    if [[ $1 == *"system/"* ]] ; then
+      path=${blobroot}/system/$1
+    else
+      path=${blobroot}/$1
+    fi
+    cp $path ${BLOBS_PATH}/${blobPath}
+  fi
 }
 
 # Import libs to Android.bp

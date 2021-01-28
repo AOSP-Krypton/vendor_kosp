@@ -61,6 +61,11 @@ while getopts 'hz:e:p:o:d:v' arg; do
   esac
 done
 
+# Check for required directories and make them if not present
+[ -d $DIR ] || mkdir -p $DIR
+[ -d $OUT ] || mkdir -p $OUT
+$DIFF && [ ! -d $OLD ] && echo "Error: directory $OLD does not exist!" && exit 1
+
 __unzip() {
   if [ ! -z $ZIP ] ; then
     echo "Unzipping....."
