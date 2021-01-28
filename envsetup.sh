@@ -17,25 +17,59 @@
 # Clear the screen
 clear
 
-# Common tags
-ERROR="\033[1;31mError"
-INFO="\033[1;32mInfo"
-WARN="\033[1;35mWarning"
+# Colors
+LR="\033[1;31m"
+LG="\033[1;32m"
+LP="\033[1;35m"
 NC="\033[0m"
 
-# Default to unofficial status
-official=false
+# Common tags
+ERROR="${LR}Error"
+INFO="${LG}Info"
+WARN="${LP}Warning"
+
+# Add all officialy supported devices to an array
+krypton_products=()
+device=""
+function devices() {
+  local tmp="0"
+  local LIST="${ANDROID_BUILD_TOP}/vendor/krypton/products/products.list"
+  local print=false
+  krypton_products=()
+  # Check whether to print list of devices
+  [ ! -z $1 ] && [ $1 == "-p" ] && print=true && echo -e "${LG}List of officially supported devices and corresponding codes:${NC}"
+
+  while read -r product; do
+    if [ ! -z $product ] ; then
+      tmp=$(expr $tmp + 1)
+      krypton_products+=("$product:$tmp")
+      if $print ; then
+        echo -ne "${LP}$tmp:${NC} ${LG}$product${NC}\t"
+        local pos=$(expr $tmp % 3)
+        [ $pos -eq 0 ] && echo -ne "\n"
+      fi
+    fi
+  done < $LIST
+  $print && echo ""
+}
+devices
+official=false # Default to unofficial status
 
 function krypton_help() {
 cat <<EOF
 Krypton specific functions:
 - cleanup:    Clean \$OUT directory, logs, as well as intermediate zips if any.
 - launch:     Build a full ota.
-              Usage: launch <device> <variant> [-q] [-s] [-g] [-n]
+              Usage: launch <device | codenum> <variant> [-q] [-s] [-g] [-n]
+              codenum for your device can be obtained by running devices -p
               -q to run silently.
               -s to generate signed ota.
               -g to build gapps variant.
               -n to not wipe out directory.
+- devices:    Usage: devices -p
+              Prints all officially supported devices with their code numbers.
+- chk_device: Usage: chk_device <device>
+              Prints whether or not device is officially supported by KOSP
 - dirty:      Run a dirty build.Mandatory to run lunch prior to it's execution.
               Usage: dirty [-q]
               -q to run silently.
@@ -101,36 +135,42 @@ function fetchrepos() {
   reposync # Sync the repos
 }
 
+function chk_device() {
+  device=""
+  official=false
+  for entry in ${krypton_products[@]}; do
+    local product=${entry%:*}
+    local product_num=${entry#*:}
+    if [ $1 == $product_num ] || [ $1 == $product ] ; then
+      device="$product"
+      official=true
+      break
+    fi
+  done
+  [ -z $device ] && device="$1"
+  # Show official or unofficial status
+  if $official ; then
+    echo -e "${INFO}: device $device is officially supported by KOSP${NC}"
+  else
+    echo -e "${WARN}: device $device is not officially supported by KOSP${NC}"
+  fi
+}
+
 function launch() {
   OPTIND=1
-  local device=""
   local variant=""
   local quiet=false
   local sign=false
   local wipe=true
   local GAPPS_BUILD=false
 
-  # Add all officialy supported devices to an array
-  local LIST="${ANDROID_BUILD_TOP}/vendor/krypton/products/products.list"
-  while read -r product; do
-    krypton_products+=("$product")
-  done < $LIST
-
   # Check for official devices
-  for product in ${krypton_products[@]}; do
-    if [ $1 == $product ] ; then
-      device="$1"
-      official=true
-      break
-    fi
-  done
-  shift # Remove device name from options
+  chk_device $1; shift # Remove device name from options
 
   # Check for build variant
   check_variant $1
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
-  variant=$1
-  shift # Remove build variant from options
+  variant=$1; shift # Remove build variant from options
 
   while getopts ":qsgn" option; do
     case $option in
@@ -145,12 +185,6 @@ function launch() {
 
   # Execute rest of the commands now as all vars are set.
   if $quiet ; then
-    # Show official or unofficial status
-    if $official ; then
-      echo -e "${INFO}: device $device is officially supported by KOSP${NC}"
-    else
-      echo -e "${WARN}: device $device is not officially supported,you might not be able to complete the build successfully${NC}"
-    fi
     $wipe && cleanup
     echo -e "${INFO}: Starting build for $device ${NC}"
     lunch krypton_$device-$variant &>> buildlog
