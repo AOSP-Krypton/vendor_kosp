@@ -84,6 +84,9 @@ Krypton specific functions:
               Pass in additional options alongside if any.
 - fetchrepos: Set up local_manifest for device and fetch the repos set in vendor/krypton/products/device.deps
               Usage: fetchrepos <device>
+- syncgapps:  Sync OpenGapps repos.
+              Usage: syncgapps [-i]
+              -i to initialize git lfs in all the source repos
 
 If run quietly, full logs will be available in ${ANDROID_BUILD_TOP}/buildlog.
 EOF
@@ -278,4 +281,27 @@ function reposync() {
   local SYNC_ARGS="--no-clone-bundle --no-tags --current-branch"
   repo sync -j$(nproc --all) $SYNC_ARGS $*
   return $?
+}
+
+function syncgapps() {
+  local sourceroot="${ANDROID_BUILD_TOP}/vendor/opengapps/sources"
+  [ ! -d $sourceroot ] && echo "${ERROR}: OpenGapps repo has not been synced!${NC}" && return 1
+  local all="${sourceroot}/all"
+  local arm="${sourceroot}/arm"
+  local arm64="${sourceroot}/arm64"
+
+  # Initialize git lfs in the repo
+  if [ ! -z $1 ] ; then
+    if [ $1 == "-i" ] ; then
+      for dir in $all $arm $arm64; do
+        cd $dir && git lfs install
+      done
+    fi
+  fi
+
+  # Fetch files
+  for dir in $all $arm $arm64; do
+    cd $dir && git lfs fetch && git lfs checkout
+  done
+  croot
 }
