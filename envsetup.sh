@@ -87,6 +87,9 @@ Krypton specific functions:
 - syncgapps:  Sync OpenGapps repos.
               Usage: syncgapps [-i]
               -i to initialize git lfs in all the source repos
+- keygen:     Generate keys for signing builds.
+              Usage: keygen <dir>
+              Default dir is ${ANDROID_BUILD_TOP}/certs
 
 If run quietly, full logs will be available in ${ANDROID_BUILD_TOP}/buildlog.
 EOF
@@ -304,4 +307,22 @@ function syncgapps() {
     cd $dir && git lfs fetch && git lfs checkout
   done
   croot
+}
+
+function keygen() {
+  local certsdir=${ANDROID_BUILD_TOP}/certs
+  [ -z $1 ] || certsdir=$1
+  rm -rf $certsdir
+  mkdir -p $certsdir
+  subject=""
+  echo "Sample subject: '/C=US/ST=California/L=Mountain View/O=Android/OU=Android/CN=Android/emailAddress=android@android.com'"
+  echo "Now enter subject details for your keys:"
+  for entry in C ST L O OU CN emailAddress ; do
+    echo -n "$entry:"
+    read val
+    subject+="/$entry=$val"
+  done
+  for key in releasekey platform shared media networkstack testkey; do
+    ./development/tools/make_key $certsdir/$key $subject
+  done
 }
