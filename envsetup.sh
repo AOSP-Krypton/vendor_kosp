@@ -31,6 +31,10 @@ WARN="${LP}Warning"
 # Add all officialy supported devices to an array
 krypton_products=()
 device=""
+
+# Set to non gapps build by default
+export GAPPS_BUILD=false
+
 function devices() {
   local tmp="0"
   local LIST="${ANDROID_BUILD_TOP}/vendor/krypton/products/products.list"
