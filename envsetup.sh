@@ -272,9 +272,9 @@ function zipup() {
 
   # Rename the ota with proper version info and timestamp
   if $official ; then
-    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-OFFICIAL-$(date "+%Y%d%m")-${1}.zip
+    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-OFFICIAL-$(date "+%Y%m%d")-${1}.zip
   else
-    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-UNOFFICIAL-$(date "+%Y%d%m")-${1}.zip
+    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-UNOFFICIAL-$(date "+%Y%m%d")-${1}.zip
   fi
   echo -e "${LTGREEN}Now flash that shit and feel the kryptonian power${NC}"
 }
