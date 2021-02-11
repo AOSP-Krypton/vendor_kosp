@@ -44,7 +44,13 @@ TARGET_KERNEL_CROSS_COMPILE_ARM32_PREFIX := $(PREBUILTS_COMMON)/gcc/linux-x86/ar
 # Build tools
 KERNEL_LLVM_SUPPORT := true
 KRYPTON_TOOLS := $(PREBUILTS_COMMON)/krypton-tools
+
+ifneq ($(strip $(CLANG_CUSTOM_TOOLCHAIN)),)
+CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/$(strip $(CLANG_CUSTOM_TOOLCHAIN))/bin
+else
 CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/clang-r383902b/bin
+endif
+
 HOST_GCC_TOOLCHAIN := $(PREBUILTS_COMMON)/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/bin
 PATH_OVERRIDE := \
     PATH=$(KRYPTON_TOOLS)/linux-x86/bin:$(CLANG_TOOLCHAIN):$$PATH \
