@@ -76,7 +76,9 @@ $(RTIC_DTB): $(INSTALLED_KERNEL_TARGET)
 # Creating a dtb.img once the kernel is compiled if TARGET_KERNEL_APPEND_DTB is set to be false
 $(INSTALLED_DTBIMAGE_TARGET): $(TARGET_PREBUILT_INT_KERNEL) $(INSTALLED_KERNEL_TARGET) $(RTIC_DTB)
 	$(hide) if [ -d "$(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/vendor/" ]; then \
-            cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/vendor/qcom/*.dtb $(RTIC_DTB) > $@; \
-          else \
-            cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/qcom/*.dtb $(RTIC_DTB) > $@; \
-          fi
+				cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/vendor/qcom/*.dtb $(RTIC_DTB) > $@; \
+			elif [ -d "$(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/$(BOARD_VENDOR)/" ]; then \
+				cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/$(BOARD_VENDOR)/**/*.dtb $(RTIC_DTB) > $@; \
+			else \
+				cat $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/qcom/*.dtb $(RTIC_DTB) > $@; \
+			fi
