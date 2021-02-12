@@ -276,7 +276,7 @@ function zipup() {
   else
     mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-UNOFFICIAL-$(date "+%Y%m%d")-${1}.zip
   fi
-  echo -e "${LTGREEN}Now flash that shit and feel the kryptonian power${NC}"
+  echo -e "${LG}Now flash that shit and feel the kryptonian power${NC}"
 }
 
 function search() {
