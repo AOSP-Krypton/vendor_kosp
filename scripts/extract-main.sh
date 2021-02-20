@@ -30,8 +30,8 @@ BLOBS_PATH=${ANDROID_BUILD_TOP}/vendor/${VENDOR}/${DEVICE}
 MKFILE=${BLOBS_PATH}/${DEVICE}-proprietary.mk
 
 # Option to choose whether to use adb or copy from unpacked images
-[ -z $1 ] && echo -e "Error: must specify a valid method to use, given option is $1" && return 1
 method="$1"
+[ -z $1 ] && echo -e "Info: using adb as no method for extraction is specified" && method="adb"
 
 if [ $method == "adb" ] ; then
   # Check if adb exists
@@ -41,8 +41,14 @@ if [ $method == "adb" ] ; then
   fi
 
   # Start adb
+  offline=true
   echo "Waiting for device to come online"
-  adb wait-for-device
+  while $offline ; do
+    out=$(adb devices)
+    device=$(echo $out | sed 's/List of devices attached//')
+    temp=$(echo $device | grep 'recovery\|device')
+    [ ! -z "$temp" ] && offline=false
+  done
   echo "Device online!"
 
   # Check if adb is running as root
@@ -75,19 +81,35 @@ libArray=()
 xmlArray=()
 packageArray=()
 
+# Var to store failed pull count
+countFailed=0
 # Main function to extract
 function start_extraction() {
   # Read blobs list line by line
   while read line; do
+    diffSource=false
+    import=false
     # Null check
     if [ ! -z "$line" ] ; then
       # Comments
       if [[ $line == *"#"* ]] ; then
         echo $line
       else
-        # Blobs to import
         if [[ $line == -* ]] ; then
           line=$(echo $line | sed 's/-//')
+          import=true
+        fi
+        if [[ $line == *:* ]] ; then
+          diffSource=true
+          origFile=${line%:*}
+          line=${line#*:}
+        else
+          origFile=$line
+        fi
+        destFile=$line
+
+        # Blobs to import
+        if $import ; then
           # Apks, jars, libs
           if [[ $line == *".apk"* ]] ; then
             appArray+=($line)
@@ -104,8 +126,9 @@ function start_extraction() {
           # Just copy blobs
           write_to_makefiles $line
         fi
-      # Extract the blob from device
-      extract_blob $line
+        # Extract the blob from device
+        extract_blob $origFile $destFile
+        [ $? -ne 0 ] && echo -e "\033[1;31mFailed\033[0m" && countFailed=$(expr $countFailed + 1)
       fi
     fi
   done < $BLOBS_LIST
@@ -113,10 +136,13 @@ function start_extraction() {
 
 # Extract everything
 function extract_blob() {
-  local blobPath=${1%/*}
+  local blobPath=${2%/*}
   mkdir -p ${BLOBS_PATH}/${blobPath}
+  STATUS=0
   if [ $method == "adb" ] ; then
     adb pull $1 ${BLOBS_PATH}/${blobPath}
+    [ $? -ne 0 ] && $diffSource && adb pull $2 ${BLOBS_PATH}/${blobPath}
+    STATUS=$?
   else
     if [[ $1 == *"system/"* ]] ; then
       path=${blobroot}/system/$1
@@ -124,7 +150,9 @@ function extract_blob() {
       path=${blobroot}/$1
     fi
     cp $path ${BLOBS_PATH}/${blobPath}
+    STATUS=$?
   fi
+  return $STATUS
 }
 
 # Import libs to Android.bp
@@ -279,3 +307,4 @@ import_app
 import_dex
 import_xml
 write_packages
+[ $countFailed -ne 0 ] && echo -e "\033[1;31mFailed pulls: $countFailed\033[0m"
