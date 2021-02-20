@@ -124,7 +124,8 @@ function fetchrepos() {
   local dir="${ANDROID_BUILD_TOP}/.repo/local_manifests" # Local manifest directory
   local manifest="${dir}/${1}.xml" # Local manifest
   [ -z $1 ] && echo -e "${ERROR}: device name cannot be empty.Usage: fetchrepos <device>${NC}" && return 1
-  echo "${INFO}: Setting up ${1}.xml${NC}"
+  [ ! -f $deps ] && echo -e "${ERROR}: deps file $deps not found" && return 1 # Return if deps file is not found 
+  echo -e "${INFO}: Setting up manifest for ${1}${NC}"
 
   [ ! -d $dir ] && mkdir -p $dir
   echo -e "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<manifest>" > $manifest
@@ -142,6 +143,7 @@ function fetchrepos() {
     echo -e "\t<project ${project[@]} />" >> $manifest
   done
   echo "</manifest>" >> $manifest # Manifest has been written
+  echo -e "${INFO}: Fetching repos....${NC}"
   reposync # Sync the repos
 }
 
