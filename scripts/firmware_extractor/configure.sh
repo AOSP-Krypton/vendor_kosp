@@ -15,11 +15,11 @@
 # limitations under the License.
 
 # Check for python and required dependencies
-if [ -z $(which python3) ] ; then
-  echo "Error: please install python3"
+if [ -z $(which python3.6) ] ; then
+  echo "Error: please install python3.6"
   exit 1
-elif [ -z $(which pip3) ] ; then
-  echo "Error: please install pip3"
+elif [ -z $(which brotli) ] ; then
+  echo "Error: please install brotli"
   exit 1
 elif [ -z $ANDROID_BUILD_TOP ] ; then
   echo "Error: please source envsetup,ANDROID_BUILD_TOP is null"
@@ -30,5 +30,5 @@ fi
 deps=("protobuf==3.6.0" "six==1.11.0" "bsdiff4>=1.1.5")
 for dep in ${deps[@]} ; do
   echo "Installing $dep"
-  pip3 install $dep
+  python3.6 -m pip install $dep
 done

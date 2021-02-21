@@ -124,7 +124,7 @@ def update(i,size):
         percent=((i/size)*100)
         if int(percent) > prev:
             for y in range(int(percent - prev)):
-                str = str + "|"
+                str = str + "="
             prev=int(percent)
             return str
         else:
