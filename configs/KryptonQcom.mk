@@ -19,6 +19,9 @@ ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(QCOM_MSMNILE)),)
 QCOM_BOARD_PATH := sm8150
 endif
 
+# Build libOmx encoders
+TARGET_USES_QCOM_MM_AUDIO := true
+
 # Get relative path for caf stuff
 get-caf-path = hardware/qcom-caf/$(QCOM_BOARD_PATH)/$(1)
 
