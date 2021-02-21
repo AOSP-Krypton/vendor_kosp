@@ -43,6 +43,11 @@ GAPPS_FORCE_MMS_OVERRIDES := true
 GAPPS_FORCE_DIALER_OVERRIDES := true
 GAPPS_FORCE_PIXEL_LAUNCHER := true
 GAPPS_PACKAGE_OVERRIDES := LatinImeGoogle
+else
+
+PRODUCT_PACKAGES += \
+    UnifiedNlp
+
 endif
 
 # Sepolicy
@@ -60,3 +65,7 @@ endif
 # Copy all krypton-specific init rc files
 $(foreach f,$(wildcard vendor/krypton/prebuilts/etc/init/*.rc),\
 	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM)/etc/init/$(notdir $f)))
+
+# Copy all app permissions xml
+$(foreach f,$(wildcard vendor/krypton/prebuilts/etc/permissions/*.xml),\
+	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/$(notdir $f)))
