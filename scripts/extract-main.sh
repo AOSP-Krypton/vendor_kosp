@@ -59,7 +59,7 @@ if [ $method == "adb" ] ; then
     exit 1
   fi
 else
-  [ -d $2 ] || echo "Error: path '$2' does not exist" && return 1
+  [ ! -d $2 ] && echo "Error: path '$2' does not exist" && exit 1
   blobroot="$2"
 fi
 

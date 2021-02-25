@@ -102,4 +102,4 @@ echo "Starting extraction......"
 __unzip
 __extract
 __unpack
-echo "Extraction finished successfully......"
+echo "Extraction finished successfully!"
