@@ -261,6 +261,10 @@ function write_to_makefiles() {
     path=${path#*/}
     echo -ne "\\" >> $MKFILE
     echo -ne "\n\tvendor/${VENDOR}/${DEVICE}/${1}:\$(TARGET_COPY_OUT_PRODUCT)/${path} " >> $MKFILE
+  elif [[ $1 == *"system/system_ext/"* ]] ; then
+    path=${path#*/}
+    echo -ne "\\" >> $MKFILE
+    echo -ne "\n\tvendor/${VENDOR}/${DEVICE}/${1}:\$(TARGET_COPY_OUT_SYSTEM_EXT)/${path} " >> $MKFILE
   elif [[ $1 == *"system/"* ]] ; then
     echo -ne "\\" >> $MKFILE
     echo -ne "\n\tvendor/${VENDOR}/${DEVICE}/${1}:\$(TARGET_COPY_OUT_SYSTEM)/${path} " >> $MKFILE
