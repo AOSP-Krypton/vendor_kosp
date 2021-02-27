@@ -45,6 +45,8 @@ while getopts 'hz:o:' arg; do
   esac
 done
 
+# Abort if zipfile is not provided
+[ -z $ZIP ] && echo "Error: zip file not provided, use -h for help"
 # Check for required directories and make them if not present, exit if unable to make them
 [ -d $OUT ] || mkdir -p $OUT
 [ $? -ne 0 ] && echo "Error: unable to create dir $OUT" && exit 1
