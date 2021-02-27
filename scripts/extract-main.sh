@@ -28,10 +28,21 @@ fi
 BLOBS_LIST=${ANDROID_BUILD_TOP}/device/${VENDOR}/${DEVICE}/blobs.txt
 BLOBS_PATH=${ANDROID_BUILD_TOP}/vendor/${VENDOR}/${DEVICE}
 MKFILE=${BLOBS_PATH}/${DEVICE}-proprietary.mk
+BPFILE=${BLOBS_PATH}/Android.bp
+
+# Parse options
+while getopts "acup:d:" option; do
+  case $option in
+    a) method="adb";;
+    c) method="copy";;
+    u) updateHash=true;;
+    p) blobroot=$OPTARG;;
+    d) dirs=$OPTARG;;
+  esac
+done
 
 # Option to choose whether to use adb or copy from unpacked images
-method="$1"
-[ -z $1 ] && echo -e "Info: using adb as no method for extraction is specified" && method="adb"
+[ -z $method ] && echo -e "Info: using adb as no method for extraction is specified" && method="adb"
 
 if [ $method == "adb" ] ; then
   # Check if adb exists
@@ -59,8 +70,9 @@ if [ $method == "adb" ] ; then
     exit 1
   fi
 else
-  [ ! -d $2 ] && echo "Error: path '$2' does not exist" && exit 1
-  blobroot="$2"
+  for dir in $dirs ; do
+    [ ! -d $dir ] && echo "Error: path $dir does not exist" && exit 1
+  done
 fi
 
 # Wipe existing blobs directory and create necessary files
@@ -72,7 +84,7 @@ else
   rm -rf $BLOBS_PATH && mkdir -p ${BLOBS_PATH}
 fi
 echo -ne "PRODUCT_SOONG_NAMESPACES += vendor/${VENDOR}/${DEVICE}\n\nPRODUCT_COPY_FILES += " > $MKFILE
-echo -e "soong_namespace {\n}" > ${BLOBS_PATH}/Android.bp
+echo -e "soong_namespace {\n}" > $BPFILE
 
 # arrays to hold list of certain blobs for import
 appArray=()
@@ -83,10 +95,13 @@ packageArray=()
 
 # Var to store failed pull count
 countFailed=0
+
 # Main function to extract
 function start_extraction() {
   # Read blobs list line by line
   while read line; do
+    hash=
+    pinned=false
     diffSource=false
     import=false
     # Null check
@@ -103,6 +118,11 @@ function start_extraction() {
           diffSource=true
           origFile=${line%:*}
           line=${line#*:}
+        elif [[ $line == *"|"* ]] ; then
+          origFile=${line%|*}
+          hash=${line#*|}
+          line=$origFile
+          pinned=true
         else
           origFile=$line
         fi
@@ -136,21 +156,45 @@ function start_extraction() {
 
 # Extract everything
 function extract_blob() {
-  local blobPath=${2%/*}
-  mkdir -p ${BLOBS_PATH}/${blobPath}
-  STATUS=0
+  local fileName=${2##*/}
+  local destPath=${BLOBS_PATH}/${2%/*}
+  local filePath=$1
+  mkdir -p $destPath
+
   if [ $method == "adb" ] ; then
-    adb pull $1 ${BLOBS_PATH}/${blobPath}
-    [ $? -ne 0 ] && $diffSource && adb pull $2 ${BLOBS_PATH}/${blobPath}
+    adb pull $filePath $destPath 2>/dev/null
+    [ $? -ne 0 ] && $diffSource && adb pull $2 $destPath 2>/dev/null
     STATUS=$?
   else
-    if [[ $1 == *"system/"* ]] ; then
-      path=${blobroot}/system/$1
-    else
-      path=${blobroot}/$1
-    fi
-    cp $path ${BLOBS_PATH}/${blobPath}
+    filePath=${blobroot}/$1
+    cp $filePath $destPath 2>/dev/null
     STATUS=$?
+    if [[ $STATUS -ne 0 ]] && [[ $1 == *"system/"* ]] ; then
+      filePath=${blobroot}/system/$1
+      cp $filePath $destPath 2>/dev/null
+      STATUS=$?
+      ! $pinned && [[ $STATUS -ne 0 ]] && echo "cp failed: $filePath $destPath"
+    fi
+  fi
+  if $pinned ; then
+    [ -z $hash ] && create_hash $2 $destPath $filePath && return $?
+    blobHash=$(md5sum $filePath 2>/dev/null | awk '{print $1}')
+    if [ -z $blobHash ] || [ ! "$blobHash" = "$hash" ] ; then
+      rm -rf $destPath/$fileName
+      for dir in $dirs ; do
+        list=$(find $dir -type f -name $fileName | grep "$2")
+        [ -z $list ] && continue
+        for line in $list ; do
+          blob=$(echo $list | grep "$2")
+          [ ! -z $blob ] && break
+        done
+        blobHash=$(md5sum $blob | awk '{print $1}')
+        if [ "$blobHash" = "$hash" ] ; then
+          cp $blob $destPath
+          return $?
+        fi
+      done
+    fi
   fi
   return $STATUS
 }
@@ -206,7 +250,7 @@ function write_lib_bp() {
     },
     compile_multilib: \"both\",
     check_elf_files: false,
-    prefer: true," >> ${BLOBS_PATH}/Android.bp
+    prefer: true," >> $BPFILE
 
   which_partition $1
 }
@@ -221,11 +265,11 @@ function write_app_bp() {
     certificate: \"platform\",
     dex_preopt: {
         enabled: false,
-    }," >> ${BLOBS_PATH}/Android.bp
+    }," >> $BPFILE
 
   if [[ $1 == *"priv-app"* ]] ; then
     echo -ne "
-    privileged: true," >> ${BLOBS_PATH}/Android.bp
+    privileged: true," >> $BPFILE
   fi
   which_partition $1
 }
@@ -236,7 +280,7 @@ function write_dex_bp() {
   echo -ne "\ndex_import {
     name: \"$moduleName\",
     owner: \"$VENDOR\",
-    jars: [\"$1\"]," >> ${BLOBS_PATH}/Android.bp
+    jars: [\"$1\"]," >> $BPFILE
 
   which_partition $1
 }
@@ -249,7 +293,7 @@ function write_xml_bp() {
     owner: \"$VENDOR\",
     src: \"$1\",
     filename_from_src: true,
-    sub_dir: \"vintf/manifest\"," >> ${BLOBS_PATH}/Android.bp
+    sub_dir: \"vintf/manifest\"," >> $BPFILE
 
   which_partition $1
 }
@@ -289,18 +333,63 @@ function which_partition() {
   if [[ $1 == *"system/product/"* ]] ; then
     echo -e "
     product_specific: true,
-}" >> ${BLOBS_PATH}/Android.bp
+}" >> $BPFILE
   elif [[ $1 == *"system/system_ext/"* ]] ; then
     echo -e "
     system_ext_specific: true,
-}" >> ${BLOBS_PATH}/Android.bp
+}" >> $BPFILE
   elif [[ $1 == *"system/"* ]] ; then
     echo -e "
-}" >> ${BLOBS_PATH}/Android.bp
+}" >> $BPFILE
   else
     echo -e "
     soc_specific: true,
-}" >> ${BLOBS_PATH}/Android.bp
+}" >> $BPFILE
+  fi
+}
+
+function create_hash() {
+  hashGen=false
+  local name=${1##*/}
+  local file=$2/$name
+  read -p "Create hash for this file: $1 [Y/n]?" prompt </dev/tty
+  if [ "$prompt" = "Y" ] || [ -z $prompt ] ; then
+    if [ -f $file ] ; then
+      echo -n "Blob $name "
+      [ "$method" = "adb" ] && echo -n "pulled via adb"
+      [ "$method" = "copy" ] && echo -n "copied "
+      echo "from $3"
+      read -p "Pin this blob [Y/n]?" pin </dev/tty
+      if [ "$pin" = "Y" ] || [ -z $pin ] ; then
+        hashGen=true
+        blobHash=$(md5sum $file | awk '{print $1}')
+        line=$(cat $BLOBS_LIST | grep $1)
+        newLine="$line$blobHash"
+        sed -i "s,$line,$newLine," $BLOBS_LIST
+        return $?
+      fi
+    fi
+    if ! $hashGen ; then
+      for dir in $dirs ; do
+        list=$(find $dir -type f -name $name | grep "$1")
+        [ -z $list ] && continue
+        for line in $list ; do
+          blob=$(echo $list | grep "$1")
+          [ ! -z $blob ] && break
+        done
+        read -p "Pin this blob: $blob [Y/n]?" pin </dev/tty
+        if [ "$pin" = "Y" ] || [ -z $pin ] ; then
+          blobHash=$(md5sum $blob | awk '{print $1}')
+          line=$(cat $BLOBS_LIST | grep $1)
+          newLine="$line$blobHash"
+          sed -i "s,$line,$newLine," $BLOBS_LIST
+          cp $blob $2
+          return $?
+        fi
+      done
+    fi
+  else
+    return $?
   fi
 }
 
