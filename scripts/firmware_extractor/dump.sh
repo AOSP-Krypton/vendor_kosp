@@ -34,6 +34,9 @@ exit 0
 # Default values
 OUT=output
 
+# Partition list
+list=( "system" "vendor" "odm" )
+
 # ext2fstools to unpack .img
 EXT2RD=$ANDROID_BUILD_TOP/prebuilts/krypton-tools/linux-x86/bin/ext2rd
 
@@ -91,13 +94,12 @@ __payload() {
 }
 
 __unpack() {
-  mkdir -p $OUT/system $OUT/vendor
-  if [ -f $OUT/system.img ] ; then
-    $EXT2RD $OUT/system.img ./:$OUT/system
-  fi
-    if [ -f $OUT/vendor.img ] ; then
-      $EXT2RD $OUT/vendor.img ./:$OUT/vendor
-  fi
+  for partition in ${list[@]} ; do
+    if [ -f $OUT/$partition.img ] ; then
+      mkdir -p $OUT/$partition
+      $EXT2RD $OUT/$partition.img ./:$OUT/$partition
+    fi
+  done
 }
 
 echo "Starting extraction......"
