@@ -70,10 +70,16 @@ if [ $method == "adb" ] ; then
     exit 1
   fi
 else
-  for dir in $dirs ; do
-    [ ! -d $dir ] && echo "Error: path $dir does not exist" && exit 1
-  done
+  if [ -z $blobroot ] ; then
+    echo "Error: path to extracted firmware must be specified" && exit 1
+  elif [ ! -d $blobroot ]; then
+    echo "Error: path $blobroot does not exist" && exit 1
+  fi
 fi
+
+for dir in $dirs ; do
+  [ ! -z $dir ] && [ ! -d $dir ] && echo "Error: path $dir does not exist" && exit 1
+done
 
 # Wipe existing blobs directory and create necessary files
 # First check if the directory is already a git repo, if so then do not wipe git metadata
@@ -96,6 +102,9 @@ packageArray=()
 # Var to store failed pull count
 countFailed=0
 
+# App signature type
+cert=
+
 # Main function to extract
 function start_extraction() {
   # Read blobs list line by line
@@ -104,6 +113,7 @@ function start_extraction() {
     pinned=false
     diffSource=false
     import=false
+    cert="platform"
     # Null check
     if [ ! -z "$line" ] ; then
       # Comments
@@ -123,6 +133,10 @@ function start_extraction() {
           hash=${line#*|}
           line=$origFile
           pinned=true
+      elif [[ $line == *";"* ]] ; then
+          origFile=${line%;*}
+          cert=${line#*;}
+          line=$origFile
         else
           origFile=$line
         fi
@@ -132,7 +146,7 @@ function start_extraction() {
         if $import ; then
           # Apks, jars, libs
           if [[ $line == *".apk"* ]] ; then
-            appArray+=($line)
+            appArray+=("$line.$cert")
           elif [[ $line == *".jar"* ]] ; then
             dexArray+=($line)
           elif [[ $line == *".xml"* ]] ; then
@@ -173,7 +187,7 @@ function extract_blob() {
       filePath=${blobroot}/system/$1
       cp $filePath $destPath 2>/dev/null
       STATUS=$?
-      ! $pinned && [[ $STATUS -ne 0 ]] && echo "cp failed: $filePath $destPath"
+      ! $pinned && [[ $STATUS -ne 0 ]] && echo "cp failed for $filePath"
     fi
   fi
   if $pinned ; then
@@ -210,7 +224,9 @@ function import_lib() {
 # Import apps to Android.bp
 function import_app() {
   for app in ${appArray[@]}; do
-    write_app_bp $app
+    cert=${app##*.}
+    app=$(echo $app | sed "s/.$cert//")
+    write_app_bp $app $cert
     packageArray+=($app)
   done
 }
@@ -261,8 +277,15 @@ function write_app_bp() {
   echo -ne "\nandroid_app_import {
     name: \"$moduleName\",
     owner: \"$VENDOR\",
-    apk: \"$1\",
-    certificate: \"platform\",
+    apk: \"$1\"," >> $BPFILE
+    if [ "$2" = "presigned" ] ; then
+      echo -ne "
+    presigned: true," >> $BPFILE
+    else
+      echo -ne "
+    certificate: \"$2\"," >> $BPFILE
+    fi
+    echo -ne "
     dex_preopt: {
         enabled: false,
     }," >> $BPFILE
