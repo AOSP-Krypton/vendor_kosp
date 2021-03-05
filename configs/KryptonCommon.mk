@@ -31,14 +31,12 @@ GAPPS_PRODUCT_PACKAGES += \
 	GoogleContacts \
 	LatinImeGoogle \
 	PrebuiltDeskClockGoogle \
-	WebViewGoogle \
 	CalendarGooglePrebuilt \
 	GoogleDialer \
 	PixelLauncher
 
 GAPPS_EXCLUDED_PACKAGES := Velvet
 GAPPS_FORCE_PACKAGE_OVERRIDES := true
-GAPPS_FORCE_WEBVIEW_OVERRIDES := true
 GAPPS_FORCE_MMS_OVERRIDES := true
 GAPPS_FORCE_DIALER_OVERRIDES := true
 GAPPS_FORCE_PIXEL_LAUNCHER := true
