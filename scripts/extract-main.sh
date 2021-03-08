@@ -30,14 +30,22 @@ BLOBS_PATH=${ANDROID_BUILD_TOP}/vendor/${VENDOR}/${DEVICE}
 MKFILE=${BLOBS_PATH}/${DEVICE}-proprietary.mk
 BPFILE=${BLOBS_PATH}/Android.bp
 
+# Whether to pin the first found blob by default, be careful with this option
+pinFirst=false
+
+# Whether to consider successfully pulled blobs for pinning
+includePulls=false
+
 # Parse options
-while getopts "acup:d:" option; do
+while getopts "acup:d:fi" option; do
   case $option in
     a) method="adb";;
     c) method="copy";;
     u) updateHash=true;;
     p) blobroot=$OPTARG;;
-    d) dirs=$OPTARG;;
+    d) dirs+="$OPTARG ";;
+    f) pinFirst=true;;
+    i) includePulls=true;;
   esac
 done
 
@@ -114,6 +122,8 @@ function start_extraction() {
     diffSource=false
     import=false
     cert="platform"
+    origFile=
+    destFile=
     # Null check
     if [ ! -z "$line" ] ; then
       # Comments
@@ -121,26 +131,32 @@ function start_extraction() {
         echo $line
       else
         if [[ $line == -* ]] ; then
-          line=$(echo $line | sed 's/-//')
+          line=$(echo $line | sed 's,-,,')
           import=true
         fi
         if [[ $line == *:* ]] ; then
           diffSource=true
           origFile=${line%:*}
           line=${line#*:}
-        elif [[ $line == *"|"* ]] ; then
-          origFile=${line%|*}
-          hash=${line#*|}
-          line=$origFile
-          pinned=true
-      elif [[ $line == *";"* ]] ; then
-          origFile=${line%;*}
-          cert=${line#*;}
-          line=$origFile
-        else
-          origFile=$line
+          destFile=$line
         fi
-        destFile=$line
+        if [[ $line == *"|"* ]] ; then
+          hash=${line#*|}
+          line=${line%|*}
+          if $diffSource ; then
+            destFile=$line
+          else
+            origFile=$line
+          fi
+          if [[ $hash == *";"* ]] ; then
+            local temp=$hash
+            hash=${temp%;*}
+            cert=${temp#*;}
+          fi
+          pinned=true
+        fi
+        [ -z $origFile ] && origFile=$line
+        [ -z $destFile ] && destFile=$line
 
         # Blobs to import
         if $import ; then
@@ -151,10 +167,8 @@ function start_extraction() {
             dexArray+=($line)
           elif [[ $line == *".xml"* ]] ; then
             xmlArray+=($line)
-          else
-            if [[ $line == *"lib64"* ]] ; then
-                libArray+=($line)
-            fi
+          elif [[ $line == *"/lib64/"* ]] || [[ $line == *"/lib/"* ]]; then
+            libArray+=($line)
           fi
         else
           # Just copy blobs
@@ -177,31 +191,42 @@ function extract_blob() {
 
   if [ $method == "adb" ] ; then
     adb pull $filePath $destPath 2>/dev/null
-    [ $? -ne 0 ] && $diffSource && adb pull $2 $destPath 2>/dev/null
     STATUS=$?
+    if [ $STATUS -ne 0 ] && $diffSource ; then
+      filePath=$2
+      adb pull $filePath $destPath 2>/dev/null
+      STATUS=$?
+    fi
   else
     filePath=${blobroot}/$1
+    [ ! -f $filePath ] && filePath=${blobroot}/system/$1
+    if $diffSource ; then
+      [ ! -f $filePath ] && filePath=${blobroot}/$2
+      [ ! -f $filePath ] && filePath=${blobroot}/system/$2
+    fi
     cp $filePath $destPath 2>/dev/null
     STATUS=$?
-    if [[ $STATUS -ne 0 ]] && [[ $1 == *"system/"* ]] ; then
-      filePath=${blobroot}/system/$1
-      cp $filePath $destPath 2>/dev/null
-      STATUS=$?
-      ! $pinned && [[ $STATUS -ne 0 ]] && echo "cp failed for $filePath"
-    fi
+    ! $pinned && [[ $STATUS -ne 0 ]] && echo "cp failed for $filePath"
   fi
+
   if $pinned ; then
     [ -z $hash ] && create_hash $2 $destPath $filePath && return $?
     blobHash=$(md5sum $filePath 2>/dev/null | awk '{print $1}')
     if [ -z $blobHash ] || [ ! "$blobHash" = "$hash" ] ; then
       rm -rf $destPath/$fileName
       for dir in $dirs ; do
-        list=$(find $dir -type f -name $fileName | grep "$2")
+        string=$1
+        list=$(find $dir -type f -name $fileName | grep "$string")
+        if [ -z $list ] ; then
+          string=$2
+          list=$(find $dir -type f -name $fileName | grep "$string")
+        fi
         [ -z $list ] && continue
         for line in $list ; do
-          blob=$(echo $list | grep "$2")
+          blob=$(echo $list | grep "$string")
           [ ! -z $blob ] && break
         done
+        [ -z $blob ] && return 1
         blobHash=$(md5sum $blob | awk '{print $1}')
         if [ "$blobHash" = "$hash" ] ; then
           cp $blob $destPath
@@ -215,9 +240,60 @@ function extract_blob() {
 
 # Import libs to Android.bp
 function import_lib() {
+  local multiLibArray=()
   for lib in ${libArray[@]}; do
-    write_lib_bp $lib
-    packageArray+=($lib)
+    local parsed=false
+    isLib=$(echo $lib | grep "/lib/")
+    if [ -z $isLib ] ; then
+      isLib64=$(echo $lib | grep "/lib64/")
+      if [ ! -z $isLib64 ] ; then
+        variant32=$(echo $lib | sed 's|/lib64/|/lib/|')
+        for tmp in ${libArray[@]}; do
+          if [ "$variant32" = "$tmp" ] ; then
+            included=false
+            for multiLib in ${multiLibArray[@]}; do
+              if [ "$tmp|$lib" = "$multiLib" ] ; then
+                included=true && break
+              fi
+            done
+            ! $included && multiLibArray+=("$tmp|$lib")
+            parsed=true
+            break
+          fi
+        done
+        if ! $parsed ; then
+          write_lib_bp "lib64" $lib
+          packageArray+=($lib)
+        fi
+      else
+        echo "Error: unknown lib variant"
+        return 1
+      fi
+    else
+      variant64=$(echo $lib | sed 's|/lib/|/lib64/|')
+      for tmp in ${libArray[@]}; do
+        if [ "$variant64" = "$tmp" ] ; then
+          included=false
+          for multiLib in ${multiLibArray[@]}; do
+            if [ "$lib|$tmp" = "$multiLib" ] ; then
+              included=true && break
+            fi
+          done
+          ! $included && multiLibArray+=("$lib|$tmp")
+          parsed=true
+          break
+        fi
+      done
+      if ! $parsed ; then
+        write_lib_bp "lib32" $lib
+        packageArray+=($lib)
+      fi
+    fi
+  done
+
+  for multiLib in ${multiLibArray[@]}; do
+    write_lib_bp "multilib" ${multiLib%|*} ${multiLib#*|}
+    packageArray+=(${multiLib#*|})
   done
 }
 
@@ -248,7 +324,16 @@ function import_xml() {
 }
 
 function write_lib_bp() {
-  local moduleName=${1##*/}
+  local moduleName=
+  local lib32=
+  local lib64=
+  local multiMode=false
+  case $1 in
+    "lib32") lib32=$2;;
+    "lib64") lib64=$2;;
+    "multilib") multiMode=true ; lib32=$2 ; lib64=$3;;
+  esac
+  moduleName=${2##*/}
   moduleName=${moduleName%.*}
   echo -ne "\ncc_prebuilt_library_shared {
     name: \"$moduleName\",
@@ -256,19 +341,33 @@ function write_lib_bp() {
     strip: {
         none: true,
     },
-    target: {
+    target: {" >> $BPFILE
+  if [ ! -z $lib32 ] ; then
+    echo -ne "
         android_arm: {
-            srcs: [\"${1}\"],
-        },
+            srcs: [\"${lib32}\"],
+        }," >> $BPFILE
+  fi
+  if [ ! -z $lib64 ] ; then
+    echo -ne "
         android_arm64: {
-            srcs: [\"${1}\"],
-        },
-    },
-    compile_multilib: \"both\",
+            srcs: [\"${lib64}\"],
+        }," >> $BPFILE
+  fi
+  echo -ne "
+    }," >> $BPFILE
+  if $multiMode ; then
+    echo -ne "
+    compile_multilib: \"both\"," >> $BPFILE
+  else
+    echo -ne "
+    compile_multilib: \"first\"," >> $BPFILE
+  fi
+  echo -ne "
     check_elf_files: false,
     prefer: true," >> $BPFILE
 
-  which_partition $1
+  which_partition $2
 }
 
 function write_app_bp() {
@@ -364,7 +463,7 @@ function which_partition() {
   elif [[ $1 == *"system/"* ]] ; then
     echo -e "
 }" >> $BPFILE
-  else
+  elif [[ $1 == *"vendor/"* ]] ; then
     echo -e "
     soc_specific: true,
 }" >> $BPFILE
@@ -375,20 +474,14 @@ function create_hash() {
   hashGen=false
   local name=${1##*/}
   local file=$2/$name
-  read -p "Create hash for this file: $1 [Y/n]?" prompt </dev/tty
-  if [ "$prompt" = "Y" ] || [ -z $prompt ] ; then
-    if [ -f $file ] ; then
-      echo -n "Blob $name "
-      [ "$method" = "adb" ] && echo -n "pulled via adb"
-      [ "$method" = "copy" ] && echo -n "copied "
-      echo "from $3"
-      read -p "Pin this blob [Y/n]?" pin </dev/tty
-      if [ "$pin" = "Y" ] || [ -z $pin ] ; then
+  ! $pinFirst && read -p "Create hash for this file: $1 [Y/n]?" prompt </dev/tty
+  if $pinFirst || [ "$prompt" = "Y" ] || [ -z $prompt ] ; then
+    if $includePulls && [ -f $file ] ; then
+      print_message $file $3
+      ! $pinFirst && read -p "Pin this blob [Y/n]?" pin </dev/tty
+      if ! $pinFirst && [ "$pin" = "Y" ] || [ -z $pin ] ; then
         hashGen=true
-        blobHash=$(md5sum $file | awk '{print $1}')
-        line=$(cat $BLOBS_LIST | grep $1)
-        newLine="$line$blobHash"
-        sed -i "s,$line,$newLine," $BLOBS_LIST
+        replace_line $file $1
         return $?
       fi
     fi
@@ -400,12 +493,10 @@ function create_hash() {
           blob=$(echo $list | grep "$1")
           [ ! -z $blob ] && break
         done
-        read -p "Pin this blob: $blob [Y/n]?" pin </dev/tty
-        if [ "$pin" = "Y" ] || [ -z $pin ] ; then
-          blobHash=$(md5sum $blob | awk '{print $1}')
-          line=$(cat $BLOBS_LIST | grep $1)
-          newLine="$line$blobHash"
-          sed -i "s,$line,$newLine," $BLOBS_LIST
+        ! $pinFirst && read -p "Pin this blob: $blob [Y/n]?" pin </dev/tty
+        if $pinFirst || [ "$pin" = "Y" ] || [ -z $pin ] ; then
+          replace_line $blob $1
+          print_message $1 $blob
           cp $blob $2
           return $?
         fi
@@ -414,6 +505,20 @@ function create_hash() {
   else
     return $?
   fi
+}
+
+function replace_line() {
+  blobHash=$(md5sum $1 | awk '{print $1}')
+  line=$(cat $BLOBS_LIST | grep $2)
+  newLine="$line$blobHash"
+  sed -i "s,$line,$newLine," $BLOBS_LIST
+}
+
+function print_message() {
+  echo -n "Blob $1 "
+  [ "$method" = "adb" ] && echo -n "pulled via adb"
+  [ "$method" = "copy" ] && echo -n "copied "
+  echo "from $2"
 }
 
 # Everything starts here
