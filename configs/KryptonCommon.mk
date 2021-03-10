@@ -22,25 +22,8 @@ PRODUCT_COPY_FILES += \
 
 # Inherit gapps if GAPPS_BUILD env variable is set
 ifeq ($(GAPPS_BUILD),true)
-GAPPS_VARIANT := nano
-$(call inherit-product, vendor/opengapps/build/opengapps-packages.mk)
-GAPPS_PRODUCT_PACKAGES += \
-	Chrome \
-	PrebuiltBugle \
-	CalculatorGoogle \
-	GoogleContacts \
-	LatinImeGoogle \
-	PrebuiltDeskClockGoogle \
-	CalendarGooglePrebuilt \
-	GoogleDialer \
-	PixelLauncher
-
-GAPPS_EXCLUDED_PACKAGES := Velvet
-GAPPS_FORCE_PACKAGE_OVERRIDES := true
-GAPPS_FORCE_MMS_OVERRIDES := true
-GAPPS_FORCE_DIALER_OVERRIDES := true
-GAPPS_FORCE_PIXEL_LAUNCHER := true
-GAPPS_PACKAGE_OVERRIDES := LatinImeGoogle
+$(call inherit-product, vendor/google/gms/config.mk)
+$(call inherit-product, vendor/google/pixel/config.mk)
 else
 
 PRODUCT_PACKAGES += \

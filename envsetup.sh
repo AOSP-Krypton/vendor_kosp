@@ -124,7 +124,7 @@ function fetchrepos() {
   local dir="${ANDROID_BUILD_TOP}/.repo/local_manifests" # Local manifest directory
   local manifest="${dir}/${1}.xml" # Local manifest
   [ -z $1 ] && echo -e "${ERROR}: device name cannot be empty.Usage: fetchrepos <device>${NC}" && return 1
-  [ ! -f $deps ] && echo -e "${ERROR}: deps file $deps not found" && return 1 # Return if deps file is not found 
+  [ ! -f $deps ] && echo -e "${ERROR}: deps file $deps not found" && return 1 # Return if deps file is not found
   echo -e "${INFO}: Setting up manifest for ${1}${NC}"
 
   [ ! -d $dir ] && mkdir -p $dir
@@ -292,7 +292,7 @@ function reposync() {
   return $?
 }
 
-function syncgapps() {
+function syncopengapps() {
   local sourceroot="${ANDROID_BUILD_TOP}/vendor/opengapps/sources"
   [ ! -d $sourceroot ] && echo "${ERROR}: OpenGapps repo has not been synced!${NC}" && return 1
   local all="${sourceroot}/all"
@@ -310,6 +310,28 @@ function syncgapps() {
 
   # Fetch files
   for dir in $all $arm $arm64; do
+    cd $dir && git lfs fetch && git lfs checkout
+  done
+  croot
+}
+
+function syncpixelgapps() {
+  local sourceroot="${ANDROID_BUILD_TOP}/vendor/google"
+  [ ! -d $sourceroot ] && echo "${ERROR}: Gapps repo has not been synced!${NC}" && return 1
+  local gms="${sourceroot}/gms"
+  local pixel="${sourceroot}/pixel"
+
+  # Initialize git lfs in the repo
+  if [ ! -z $1 ] ; then
+    if [ $1 == "-i" ] ; then
+      for dir in $gms $pixel; do
+        cd $dir && git lfs install
+      done
+    fi
+  fi
+
+  # Fetch files
+  for dir in $gms $pixel; do
     cd $dir && git lfs fetch && git lfs checkout
   done
   croot
