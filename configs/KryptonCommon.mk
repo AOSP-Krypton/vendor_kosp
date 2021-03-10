@@ -31,6 +31,13 @@ PRODUCT_PACKAGES += \
 
 endif
 
+# Overlays
+PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += \
+	vendor/krypton/overlays
+
+DEVICE_PACKAGE_OVERLAYS += \
+	vendor/krypton/overlays/overlay-krypton
+
 # Sepolicy
 include vendor/krypton/sepolicy/KryptonSepolicy.mk
 
