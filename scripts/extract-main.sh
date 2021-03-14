@@ -230,11 +230,12 @@ function extract_blob() {
         blobHash=$(md5sum $blob | awk '{print $1}')
         if [ "$blobHash" = "$hash" ] ; then
           cp $blob $destPath
-          return $?
+          STATUS=$?
         fi
       done
     fi
   fi
+  $pinned && [[ $STATUS -ne 0 ]] && echo "Failed to pull pinned blob: $fileName"
   return $STATUS
 }
 
