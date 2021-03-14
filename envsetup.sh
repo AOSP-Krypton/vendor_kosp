@@ -269,18 +269,25 @@ function zipup() {
   versionMajor=1
   versionMinor=0
   version="v$versionMajor.$versionMinor"
+  TAGS=
 
   # Check build variant and check if ota is present
   check_variant $1
   [ $? -ne 0 ] && echo -e "${ERROR}: must provide a valid build variant${NC}" && return 1
   [ ! -f signed-ota.zip ] && echo -e "${ERROR}: ota not found${NC}" && return 1
 
-  # Rename the ota with proper version info and timestamp
   if $official ; then
-    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-OFFICIAL-$(date "+%Y%m%d")-${1}.zip
-  else
-    mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}-UNOFFICIAL-$(date "+%Y%m%d")-${1}.zip
+    TAGS+="-OFFICIAL"
   fi
+  if $GAPPS_BUILD; then
+    TAGS+="-GAPPS"
+  else
+    TAGS+="-VANILLA"
+  fi
+
+  # Rename the ota with proper build info and timestamp
+  mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}${TAGS}-$(date "+%Y%m%d")-${1}.zip
+
   echo -e "${LG}Now flash that shit and feel the kryptonian power${NC}"
 }
 
