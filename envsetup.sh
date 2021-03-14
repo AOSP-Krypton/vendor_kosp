@@ -88,12 +88,15 @@ Krypton specific functions:
               Pass in additional options alongside if any.
 - fetchrepos: Set up local_manifest for device and fetch the repos set in vendor/krypton/products/device.deps
               Usage: fetchrepos <device>
-- syncgapps:  Sync OpenGapps repos.
-              Usage: syncgapps [-i]
-              -i to initialize git lfs in all the source repos
 - keygen:     Generate keys for signing builds.
               Usage: keygen <dir>
               Default dir is ${ANDROID_BUILD_TOP}/certs
+- syncopengapps:  Sync OpenGapps repos.
+                  Usage: syncgapps [-i]
+                  -i to initialize git lfs in all the source repos
+- syncpixelgapps:  Sync our Gapps repo.
+                  Usage: syncpixelgapps [-i]
+                  -i to initialize git lfs in all the source repos
 
 If run quietly, full logs will be available in ${ANDROID_BUILD_TOP}/buildlog.
 EOF
