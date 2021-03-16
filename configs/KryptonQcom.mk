@@ -15,11 +15,14 @@
 # Board platforms
 QCOM_MSMNILE := sm8150 msmnile
 QCOM_MSM8998 := sdm660
+QCOM_TRINKET := sm6125 trinket
 
 ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(QCOM_MSMNILE)),)
 QCOM_BOARD_PATH := sm8150
 else ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(QCOM_MSM8998)),)
 QCOM_BOARD_PATH := msm8998
+else ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(QCOM_TRINKET)),)
+QCOM_BOARD_PATH := sm6125
 endif
 
 # Build libOmx encoders
