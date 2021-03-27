@@ -43,8 +43,11 @@ PRODUCT_PACKAGES += \
     ThemePicker
 
 # Overlays
+PRODUCT_PACKAGE_OVERLAYS += \
+	vendor/krypton/overlays/common
+
 PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += \
-	vendor/krypton/overlays
+	vendor/krypton/overlays/common
 
 DEVICE_PACKAGE_OVERLAYS += \
 	vendor/krypton/overlays/overlay-krypton
