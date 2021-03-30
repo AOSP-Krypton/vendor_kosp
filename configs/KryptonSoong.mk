@@ -17,7 +17,8 @@
 SOONG_CONFIG_NAMESPACES += kryptonGlobalVars
 SOONG_CONFIG_kryptonGlobalVars += \
     target_init_vendor_lib \
-    target_surfaceflinger_fod_lib
+    target_surfaceflinger_fod_lib \
+    target_ld_shim_libs
 
 
 SOONG_CONFIG_NAMESPACES += kryptonQcomVars
@@ -34,3 +35,4 @@ SOONG_CONFIG_kryptonQcomVars_uses_pre_uplink_features_netmgrd := $(TARGET_USES_P
 # Soong value variables
 SOONG_CONFIG_kryptonGlobalVars_target_init_vendor_lib := $(TARGET_INIT_VENDOR_LIB)
 SOONG_CONFIG_kryptonGlobalVars_target_surfaceflinger_fod_lib := $(TARGET_SURFACEFLINGER_FOD_LIB)
+SOONG_CONFIG_kryptonGlobalVars_target_ld_shim_libs := $(subst $(space),:,$(TARGET_LD_SHIM_LIBS))
