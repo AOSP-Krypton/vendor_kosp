@@ -1,4 +1,0 @@
-android_library {
-    name: "FODAnimations",
-    resource_dirs: ["res"],
-}
