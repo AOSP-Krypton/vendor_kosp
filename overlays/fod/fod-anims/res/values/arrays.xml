@@ -45,4 +45,36 @@
         <item>@drawable/fod_recog_animation_strings</item>
         <item>@drawable/fod_recog_animation_quantum</item>
     </array>
+
+    <!-- FOD Animation previews -->
+    <array name="config_fodAnimPreviews">
+        <item>@drawable/gxzw_normal_recognizing_anim_11</item>
+        <item>@drawable/gxzw_aod_recognizing_anim_10</item>
+        <item>@drawable/gxzw_aurora_recognizing_anim_23</item>
+        <item>@drawable/gxzw_aurora_cas_recognizing_anim_22</item>
+        <item>@drawable/gxzw_light_recognizing_anim_13</item>
+        <item>@drawable/gxzw_pop_recognizing_anim_8</item>
+        <item>@drawable/gxzw_pulse_recognizing_anim_12</item>
+        <item>@drawable/gxzw_pulse_recognizing_anim_white_12</item>
+        <item>@drawable/gxzw_rhythm_recognizing_anim_17</item>
+        <item>@drawable/gxzw_star_cas_recognizing_anim_19</item>
+        <item>@drawable/fod_op_cosmos_anim_54</item>
+        <item>@drawable/fod_op_energy_anim_28</item>
+        <item>@drawable/fod_op_mclaren_anim_30</item>
+        <item>@drawable/fod_op_ripple_anim_22</item>
+        <item>@drawable/fod_op_scanning_anim_18</item>
+        <item>@drawable/fod_op_stripe_anim_13</item>
+        <item>@drawable/fod_op_wave_anim_18</item>
+        <item>@drawable/fod_pureview_dna_anim_10</item>
+        <item>@drawable/fod_pureview_future_anim_25</item>
+        <item>@drawable/fod_pureview_halo_ring_anim_32</item>
+        <item>@drawable/fod_pureview_molecular_anim_30</item>
+        <item>@drawable/asus_fod_anim_1_06</item>
+        <item>@drawable/asus_fod_anim_2_06</item>
+        <item>@drawable/asus_fod_anim_3_10</item>
+        <item>@drawable/fod_recog_animation_shine_16</item>
+        <item>@drawable/fod_recog_animation_smoke_5</item>
+        <item>@drawable/fod_recog_animation_strings_16</item>
+        <item>@drawable/fod_recog_animation_quantum_5</item>
+    </array>
 </resources>
