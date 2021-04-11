@@ -140,18 +140,20 @@ function start_extraction() {
           line=${line#*:}
           destFile=$line
         fi
-        if [[ $line == *"|"* ]] ; then
+        if [[ $line == *";"* ]] ; then
+          cert=${line#*;}
+          line=${line%;*}
+          if [[ $cert == *"|"* ]] ; then
+            hash=${cert#*|}
+            cert=${cert%|*}
+          fi
+        elif [[ $line == *"|"* ]] ; then
           hash=${line#*|}
           line=${line%|*}
           if $diffSource ; then
             destFile=$line
           else
             origFile=$line
-          fi
-          if [[ $hash == *";"* ]] ; then
-            local temp=$hash
-            hash=${temp%;*}
-            cert=${temp#*;}
           fi
           pinned=true
         fi
@@ -199,10 +201,10 @@ function extract_blob() {
     fi
   else
     filePath=${blobroot}/$1
-    [ ! -f $filePath ] && filePath=${blobroot}/system/$1
+    [ ! -f $filePath ] && [[ $filePath == *"/system/"* ]] && filePath=${blobroot}/system/$1
     if $diffSource ; then
       [ ! -f $filePath ] && filePath=${blobroot}/$2
-      [ ! -f $filePath ] && filePath=${blobroot}/system/$2
+      [ ! -f $filePath ] && [[ $filePath == *"/system/"* ]] && filePath=${blobroot}/system/$2
     fi
     cp $filePath $destPath 2>/dev/null
     STATUS=$?
@@ -378,7 +380,7 @@ function write_app_bp() {
     name: \"$moduleName\",
     owner: \"$VENDOR\",
     apk: \"$1\"," >> $BPFILE
-    if [ "$2" = "presigned" ] ; then
+    if [ "$2" = "presigned" ] || [ "$2" == "PRESIGNED" ] ; then
       echo -ne "
     presigned: true," >> $BPFILE
     else
