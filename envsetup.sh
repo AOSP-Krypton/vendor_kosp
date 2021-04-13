@@ -199,19 +199,25 @@ function launch() {
   export GAPPS_BUILD # Set whether to include gapps in the rom
 
   # Execute rest of the commands now as all vars are set.
+  timeStart=$(date "+%s")
   if $quiet ; then
     $wipe && cleanup
     echo -e "${INFO}: Starting build for $device ${NC}"
     lunch krypton_$device-$variant &>> buildlog
     [ $? -eq 0 ] && dirty -q
-    [ $? -eq 0 ] && $sign && sign -q && zipup $variant && return 0
+    [ $? -eq 0 ] && $sign && sign -q && zipup $variant
+    STATUS=$?
   else
     $wipe && rm -rf *.zip buildlog && make clean
     lunch krypton_$device-$variant
     [ $? -eq 0 ] && dirty
-    [ $? -eq 0 ] && $sign && sign && zipup $variant && return 0
+    [ $? -eq 0 ] && $sign && sign && zipup $variant
+    STATUS=$?
   fi
-  return 1
+  endTime=$(date "+%s")
+  echo -e "${INFO}: build finished in $(timer $timeStart $endTime)${NC}"
+
+  return $STATUS
 }
 
 function dirty() {
@@ -287,8 +293,6 @@ function zipup() {
 
   # Rename the ota with proper build info and timestamp
   mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}${TAGS}-$(date "+%Y%m%d")-${1}.zip
-
-  echo -e "${LG}Now flash that shit and feel the kryptonian power${NC}"
 }
 
 function search() {
