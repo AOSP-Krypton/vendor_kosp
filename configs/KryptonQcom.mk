@@ -39,3 +39,19 @@ PRODUCT_CFI_INCLUDE_PATHS += \
 PRODUCT_PACKAGES += \
     libvndfwk_detect_jni.qti \
     libvndfwk_detect_jni.qti.vendor
+
+# caf bt stack
+ifeq ($(TARGET_USE_QTI_BT_STACK),true)
+PRODUCT_SOONG_NAMESPACES += \
+    vendor/qcom/opensource/commonsys/packages/apps/Bluetooth \
+    vendor/qcom/opensource/commonsys/system/bt/conf
+
+PRODUCT_PACKAGES += \
+	libbluetooth_qti \
+	libbluetooth_qti_jni \
+	libbtconfigstore \
+	vendor.qti.hardware.btconfigstore@1.0 \
+	vendor.qti.hardware.btconfigstore@2.0 \
+	com.qualcomm.qti.bluetooth_audio@1.0 \
+	vendor.qti.hardware.bluetooth_audio@2.0
+endif
