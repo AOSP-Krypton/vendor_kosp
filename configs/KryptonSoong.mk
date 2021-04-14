@@ -23,7 +23,9 @@ SOONG_CONFIG_kryptonGlobalVars += \
 
 SOONG_CONFIG_NAMESPACES += kryptonQcomVars
 SOONG_CONFIG_kryptonQcomVars += \
-    uses_pre_uplink_features_netmgrd
+    uses_pre_uplink_features_netmgrd \
+    supports_hw_fde \
+    supports_hw_fde_perf
 
 # Set default values
 TARGET_INIT_VENDOR_LIB ?= vendor_init
@@ -36,3 +38,5 @@ SOONG_CONFIG_kryptonQcomVars_uses_pre_uplink_features_netmgrd := $(TARGET_USES_P
 SOONG_CONFIG_kryptonGlobalVars_target_init_vendor_lib := $(TARGET_INIT_VENDOR_LIB)
 SOONG_CONFIG_kryptonGlobalVars_target_surfaceflinger_fod_lib := $(TARGET_SURFACEFLINGER_FOD_LIB)
 SOONG_CONFIG_kryptonGlobalVars_target_ld_shim_libs := $(subst $(space),:,$(TARGET_LD_SHIM_LIBS))
+SOONG_CONFIG_kryptonQcomVars_supports_hw_fde := $(TARGET_HW_DISK_ENCRYPTION)
+SOONG_CONFIG_kryptonQcomVars_supports_hw_fde_perf := $(TARGET_HW_DISK_ENCRYPTION_PERF)
