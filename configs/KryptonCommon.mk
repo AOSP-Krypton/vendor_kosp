@@ -31,6 +31,10 @@ PRODUCT_PACKAGES += \
 
 endif
 
+# OTA Updater
+PRODUCT_PACKAGES += \
+    KOSP-Updater
+
 # Overlays
 PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += \
 	vendor/krypton/overlays
