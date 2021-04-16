@@ -54,4 +54,7 @@ PRODUCT_PACKAGES += \
 	vendor.qti.hardware.btconfigstore@2.0 \
 	com.qualcomm.qti.bluetooth_audio@1.0 \
 	vendor.qti.hardware.bluetooth_audio@2.0
+else
+PRODUCT_SOONG_NAMESPACES += \
+    packages/apps/Bluetooth
 endif
