@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Krypton build info
+include vendor/krypton/configs/KryptonProps.mk
+
 # Krypton utils
 include vendor/krypton/configs/KryptonUtils.mk
 
