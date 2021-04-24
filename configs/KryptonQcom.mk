@@ -14,7 +14,7 @@
 
 # Board platforms
 QCOM_MSMNILE := sm8150 msmnile
-QCOM_MSM8998 := sdm660
+QCOM_MSM8998 := sdm660 msm8998
 QCOM_TRINKET := sm6125 trinket
 
 ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(QCOM_MSMNILE)),)
@@ -24,6 +24,13 @@ QCOM_BOARD_PATH := msm8998
 else ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(QCOM_TRINKET)),)
 QCOM_BOARD_PATH := sm6125
 endif
+
+# Soong namespaces and common flags
+PRODUCT_SOONG_NAMESPACES += \
+    hardware/qcom-caf/$(QCOM_BOARD_PATH) \
+    vendor/qcom/opensource/display-commonsys-intf
+
+MSM_VIDC_TARGET_LIST := $(QCOM_MSMNILE) $(QCOM_TRINKET)
 
 # Build libOmx encoders
 TARGET_USES_QCOM_MM_AUDIO := true
