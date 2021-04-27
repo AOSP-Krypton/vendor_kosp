@@ -93,3 +93,7 @@ endif
 PRODUCT_DEXPREOPT_SPEED_APPS += \
     Settings \
     SystemUI
+
+# IORap app launch prefetching using Perfetto traces and madvise
+PRODUCT_PRODUCT_PROPERTIES += \
+    ro.iorapd.enable=true
