@@ -292,7 +292,15 @@ function zipup() {
   fi
 
   # Rename the ota with proper build info and timestamp
-  mv signed-ota.zip KOSP-${version}-${KRYPTON_BUILD}${TAGS}-$(date "+%Y%m%d")-${1}.zip
+  SIZE=$(du -b signed-ota.zip | awk '{print $1}')
+  NAME="KOSP-${version}-${KRYPTON_BUILD}${TAGS}-$(date "+%Y%m%d")-${1}.zip"
+  mv signed-ota.zip $NAME
+
+  TS=$(cat $OUT/system/etc/prop.default | grep "timestamp" | sed 's|ro.krypton.build.timestamp=||')
+
+  echo -e "${INFO}: filesize=${SIZE}"
+  echo -e "${INFO}: filename=${NAME}"
+  echo -e "${INFO}: timestamp=${TS}"
 }
 
 function search() {
