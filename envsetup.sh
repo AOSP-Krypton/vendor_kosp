@@ -97,6 +97,9 @@ Krypton specific functions:
 - syncpixelgapps:  Sync our Gapps repo.
                   Usage: syncpixelgapps [-i]
                   -i to initialize git lfs in all the source repos
+- merge_aosp: Fetch and merge the given tag from aosp source for the repos forked from aosp in krypton.xml
+              Usage: merge_aosp <tag>
+              Example: merge_aosp android-11.0.0_r37
 
 If run quietly, full logs will be available in ${ANDROID_BUILD_TOP}/buildlog.
 EOF
@@ -375,4 +378,63 @@ function keygen() {
   for key in releasekey platform shared media networkstack testkey; do
     ./development/tools/make_key $certsdir/$key $subject
   done
+}
+
+function merge_aosp() {
+  local tag="$1"
+  local platformUrl="https://android.googlesource.com/platform/"
+  local url=
+  croot
+  [ -z $tag ] && echo -e "${ERROR}: aosp tag cannot be empty${NC}" && return 1
+  local manifest="${ANDROID_BUILD_TOP}/.repo/manifests/krypton.xml"
+  if [ -f $manifest ] ; then
+    while read line; do
+      if [[ $line == *"<project"* ]] ; then
+        tmp=$(echo $line | awk '{print $2}' | sed 's|path="||; s|"||')
+        if [[ -z $(echo $tmp | grep -iE "krypton|devicesettings") ]] ; then
+          cd $tmp
+          git -C . rev-parse 2>/dev/null
+          if [ $? -eq 0 ] ; then
+            if [ $tmp == "build/make" ] ; then
+              url="${platformUrl}build"
+            else
+              url="$platformUrl$tmp"
+            fi
+            remoteName=$(git remote -v | grep -m 1 "$url" | awk '{print $1}')
+            if [ -z $remoteName ] ; then
+              echo "adding remote for $tmp"
+              remoteName="aosp"
+              git remote add $remoteName $url
+            fi
+            # skip system/core as we have rebased this repo, manually cherry-pick the patches
+            if [[ $tmp == "system/core" ]] ; then
+              echo -e "${INFO}: skipping $tmp, please do a manual merge${NC}"
+              croot
+              continue
+            fi
+            echo -e "${INFO}: merging tag $tag in $tmp${NC}"
+            git fetch $remoteName $tag && git merge FETCH_HEAD
+            if [ $? -eq 0 ] ; then
+              echo -e "${INFO}: merged tag $tag${NC}"
+              git push krypton HEAD:A11
+              if [ $? -ne 0 ] ; then
+                echo -e "${ERROR}: pushing changes failed, please do a manual push${NC}"
+              fi
+            else
+              echo -e "${ERROR}: merging tag $tag failed, please do a manual merge${NC}"
+              croot
+              return 1
+            fi
+          else
+            echo -e "${ERROR}: $tmp is not a git repo${NC}"
+            croot
+            return 1
+          fi
+          croot
+        fi
+      fi
+    done < $manifest
+  else
+    echo -e "${ERROR}: unable to find $manifest file${NC}" && return 1
+  fi
 }
