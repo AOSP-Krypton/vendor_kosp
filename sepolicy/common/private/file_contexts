@@ -1,0 +1,2 @@
+# ota package dir and files
+/data/kosp_ota(/.*)?            u:object_r:updater_ota_file:s0

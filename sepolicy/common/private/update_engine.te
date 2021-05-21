@@ -1,0 +1,5 @@
+# Allow binder IPC with updater_app
+binder_call(update_engine, updater_app)
+
+# Allow update_engine to read updater_ota_file
+r_dir_file(update_engine, updater_ota_file)
