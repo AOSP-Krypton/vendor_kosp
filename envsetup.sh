@@ -33,7 +33,8 @@ krypton_products=()
 device=""
 
 # Set to non gapps build by default
-export GAPPS_BUILD=false
+GAPPS_BUILD=false
+export GAPPS_BUILD
 
 function devices() {
   local tmp="0"
@@ -62,24 +63,21 @@ official=false # Default to unofficial status
 function krypton_help() {
 cat <<EOF
 Krypton specific functions:
-- cleanup:    Clean \$OUT directory, logs, as well as intermediate zips if any.
+- cleanup:    Clean \$OUT directory, as well as intermediate zips if any.
 - launch:     Build a full ota.
-              Usage: launch <device | codenum> <variant> [-q] [-s] [-g] [-n]
-              codenum for your device can be obtained by running devices -p
-              -q to run silently.
+              Usage: launch <device | codenum> <variant> [-s] [-g] [-n] [-c]
+              codenum for your device can be obtained by running: devices -p
               -s to generate signed ota.
               -g to build gapps variant.
               -n to not wipe out directory.
+              -c to do an install-clean.
+              Example: 'launch 1 user -sg' , or 'launch guacamole user -sg'
+                    Both will do a clean user build with gapps for device guacamole (codenum 1)
 - devices:    Usage: devices -p
               Prints all officially supported devices with their code numbers.
 - chk_device: Usage: chk_device <device>
               Prints whether or not device is officially supported by KOSP
-- dirty:      Run a dirty build.Mandatory to run lunch prior to it's execution.
-              Usage: dirty [-q]
-              -q to run silently.
 - sign:       Sign and build ota.Execute only after a successfull make.
-              Usage: sign [-q]
-              -q to run silently.
 - zipup:      Rename the signed ota with build info.
               Usage: zipup <variant>
 - search:     Search in every file in the current directory for a string.Uses xargs for parallel search.
@@ -100,8 +98,6 @@ Krypton specific functions:
 - merge_aosp: Fetch and merge the given tag from aosp source for the repos forked from aosp in krypton.xml
               Usage: merge_aosp <tag>
               Example: merge_aosp android-11.0.0_r37
-
-If run quietly, full logs will be available in ${ANDROID_BUILD_TOP}/buildlog.
 EOF
 }
 
@@ -116,10 +112,8 @@ function timer() {
 
 function cleanup() {
   croot
-  echo -e "${INFO}: cleaning build directory....${NC}"
-  make clean &> /dev/null
-  rm -rf *.zip buildlog
-  echo -e "${INFO}: done cleaning${NC}"
+  make clean
+  rm -rf K*.zip s*.zip
   return $?
 }
 
@@ -177,10 +171,9 @@ function chk_device() {
 function launch() {
   OPTIND=1
   local variant=""
-  local quiet=false
   local sign=false
   local wipe=true
-  local GAPPS_BUILD=false
+  local installclean=false
 
   # Check for official devices
   chk_device $1; shift # Remove device name from options
@@ -190,12 +183,12 @@ function launch() {
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
 
-  while getopts ":qsgn" option; do
+  while getopts ":sgnc" option; do
     case $option in
-      q) quiet=true;;
       s) sign=true;;
       g) GAPPS_BUILD=true;;
       n) wipe=false;;
+      c) installclean=true;;
      \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
     esac
   done
@@ -203,73 +196,54 @@ function launch() {
 
   # Execute rest of the commands now as all vars are set.
   timeStart=$(date "+%s")
-  if $quiet ; then
-    $wipe && cleanup
-    echo -e "${INFO}: Starting build for $device ${NC}"
-    lunch krypton_$device-$variant &>> buildlog
-    [ $? -eq 0 ] && dirty -q
-    [ $? -eq 0 ] && $sign && sign -q && zipup $variant
+
+  if $wipe ; then
+    cleanup
+  elif $installclean ; then
+    make install-clean
+  fi
+
+  lunch krypton_$device-$variant
+  STATUS=$?
+
+  if [ $STATUS -eq 0 ] ; then
+    make -j$(nproc --all) target-files-package otatools
     STATUS=$?
   else
-    $wipe && rm -rf *.zip buildlog && make clean
-    lunch krypton_$device-$variant
-    [ $? -eq 0 ] && dirty
-    [ $? -eq 0 ] && $sign && sign && zipup $variant
-    STATUS=$?
+    return $STATUS
   fi
+
+  if [ $STATUS -eq 0 ] ; then
+    if $sign ; then
+      sign
+      STATUS=$?
+    fi
+  else
+    return $STATUS
+  fi
+
+  if [ $STATUS -eq 0 ] ; then
+    zipup $variant
+    STATUS=$?
+  else
+    return $STATUS
+  fi
+
   endTime=$(date "+%s")
   echo -e "${INFO}: build finished in $(timer $timeStart $endTime)${NC}"
 
   return $STATUS
 }
 
-function dirty() {
-  croot
-  if [ -z $1 ] ; then
-    make -j$(nproc --all) target-files-package otatools && return 0
-  elif [ $1 == "-q" ] ; then
-    [ -z $KRYPTON_BUILD ] && echo -e "${ERROR}: Target device not found ,have you run lunch?${NC}" && return 1
-    echo -e "${INFO}: running make....${NC}"
-    local start=$(date "+%s")
-    make -j$(nproc --all) target-files-package otatools  &>> buildlog
-    [ $? -eq 0 ] && echo -e "\n${INFO}: make finished in $(timer $start $(date "+%s"))${NC}" && return 0
-  else
-    echo -e "${ERROR}: expected argument \"-q\", provided \"$1\"${NC}" && return 1
-  fi
-}
-
 function sign() {
-  local tfi="$OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip"
-  local apksign="./build/tools/releasetools/sign_target_files_apks -o -d $ANDROID_BUILD_TOP/certs \
-                -p out/host/linux-x86 -v $tfi signed-target_files.zip"
-
-  local buildota="./build/tools/releasetools/ota_from_target_files -k $ANDROID_BUILD_TOP/certs/releasekey \
-                  -p out/host/linux-x86 -v --block \
-                  signed-target_files.zip signed-ota.zip"
-
   croot
-  if [ -z $1 ] ; then
-    $apksign && $buildota
-  elif [ $1 == "-q" ] ; then
-    local start=$(date "+%s")
-    if [ -z $KRYPTON_BUILD ] ; then
-      echo -e "${ERROR}: target device not found,have you run lunch?${NC}" && return 1
-    elif [ ! -f $tfi ] ; then
-      echo -e "${ERROR}: target files zip not found,was make successfull?${NC}" && return 1
-    fi
-    echo -e "${INFO}: signing build......${NC}"
-    $apksign &>> buildlog
-    [ $? -ne 0 ] && echo -e "${ERROR}: failed to sign build!${NC}" && return 1
-    echo -e "${INFO}: done signing build${NC}"
-    echo -e "${INFO}: generating ota package.....${NC}"
-    $buildota &>> buildlog
-    [ $? -ne 0 ] && echo -e "${ERROR}: failed to build ota!${NC}" && return 1
-    echo -e "${INFO}: signed ota built from target files package${NC}"
-    echo -e "${INFO}: ota generated in $(timer $start $(date "+%s"))${NC}"
-    return 0
-  else
-    echo -e "${ERROR}: expected argument \"-q\", provided \"$1\"${NC}" && return 1
-  fi
+  ./build/tools/releasetools/sign_target_files_apks \
+         -o -d $ANDROID_BUILD_TOP/certs \
+         -p out/host/linux-x86 -v \
+         $OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip signed-target_files.zip
+  ./build/tools/releasetools/ota_from_target_files -k $ANDROID_BUILD_TOP/certs/releasekey \
+         -p out/host/linux-x86 -v --block \
+         signed-target_files.zip signed-ota.zip
 }
 
 function zipup() {
@@ -294,16 +268,19 @@ function zipup() {
     TAGS+="-VANILLA"
   fi
 
-  # Rename the ota with proper build info and timestamp
   SIZE=$(du -b signed-ota.zip | awk '{print $1}')
+
+  # Rename the ota with proper build info and timestamp
   NAME="KOSP-${version}-${KRYPTON_BUILD}${TAGS}-$(date "+%Y%m%d")-${1}.zip"
   mv signed-ota.zip $NAME
+  MD5=$(md5sum $NAME | awk '{print $1}')
 
-  TS=$(cat $OUT/system/etc/prop.default | grep "timestamp" | sed 's|ro.krypton.build.timestamp=||')
+  DATE=$(cat $OUT/system/build.prop | grep "ro.build.date.utc" | sed 's|ro.build.date.utc=||')
 
-  echo -e "${INFO}: filesize=${SIZE}"
-  echo -e "${INFO}: filename=${NAME}"
-  echo -e "${INFO}: timestamp=${TS}"
+  echo -e "${INFO}: filename: ${NAME}"
+  echo -e "${INFO}: filesize: ${SIZE}"
+  echo -e "${INFO}: date: ${DATE}"
+  echo -e "${INFO}: md5sum: ${MD5}"
 }
 
 function search() {
