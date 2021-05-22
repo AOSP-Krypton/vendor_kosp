@@ -368,7 +368,7 @@ function merge_aosp() {
     while read line; do
       if [[ $line == *"<project"* ]] ; then
         tmp=$(echo $line | awk '{print $2}' | sed 's|path="||; s|"||')
-        if [[ -z $(echo $tmp | grep -iE "krypton|devicesettings") ]] ; then
+        if [[ -z $(echo $tmp | grep -iE "krypton|kosp|devicesettings") ]] ; then
           cd $tmp
           git -C . rev-parse 2>/dev/null
           if [ $? -eq 0 ] ; then
