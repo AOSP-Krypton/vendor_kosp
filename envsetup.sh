@@ -71,6 +71,7 @@ Krypton specific functions:
               -g to build gapps variant.
               -n to not wipe out directory.
               -c to do an install-clean.
+              -j to generate ota json for the device.
               Example: 'launch 1 user -sg' , or 'launch guacamole user -sg'
                     Both will do a clean user build with gapps for device guacamole (codenum 1)
 - devices:    Usage: devices -p
@@ -79,7 +80,8 @@ Krypton specific functions:
               Prints whether or not device is officially supported by KOSP
 - sign:       Sign and build ota.Execute only after a successfull make.
 - zipup:      Rename the signed ota with build info.
-              Usage: zipup <variant>
+              Usage: zipup <variant> [-j]
+              -j to generate ota json
 - search:     Search in every file in the current directory for a string.Uses xargs for parallel search.
               Usage: search <string>
 - reposync:   Sync repo with the following default params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.
@@ -174,6 +176,7 @@ function launch() {
   local sign=false
   local wipe=true
   local installclean=false
+  local json=false
 
   # Check for official devices
   chk_device $1; shift # Remove device name from options
@@ -183,12 +186,13 @@ function launch() {
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
 
-  while getopts ":sgnc" option; do
+  while getopts ":sgncj" option; do
     case $option in
       s) sign=true;;
       g) GAPPS_BUILD=true;;
       n) wipe=false;;
       c) installclean=true;;
+      j) json=true;;
      \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
     esac
   done
@@ -223,8 +227,13 @@ function launch() {
   fi
 
   if [ $STATUS -eq 0 ] ; then
-    zipup $variant
-    STATUS=$?
+    if $json ; then
+      zipup $variant "-j"
+      STATUS=$?
+    else
+      zipup $variant
+      STATUS=$?
+    fi
   else
     return $STATUS
   fi
@@ -257,10 +266,13 @@ function zipup() {
   # Check build variant and check if ota is present
   check_variant $1
   [ $? -ne 0 ] && echo -e "${ERROR}: must provide a valid build variant${NC}" && return 1
+  [ -z $KRYPTON_BUILD ] && echo -e "${ERROR}: have you run lunch?${NC}" && return 1
   [ ! -f signed-ota.zip ] && echo -e "${ERROR}: ota not found${NC}" && return 1
 
   if $official ; then
     TAGS+="-OFFICIAL"
+  else
+    TAGS+="-UNOFFICIAL"
   fi
   if $GAPPS_BUILD; then
     TAGS+="-GAPPS"
@@ -277,10 +289,28 @@ function zipup() {
 
   DATE=$(cat $OUT/system/build.prop | grep "ro.build.date.utc" | sed 's|ro.build.date.utc=||')
 
-  echo -e "${INFO}: filename: ${NAME}"
-  echo -e "${INFO}: filesize: ${SIZE}"
-  echo -e "${INFO}: date: ${DATE}"
-  echo -e "${INFO}: md5sum: ${MD5}"
+  echo -e "${INFO}: filename  : ${NAME}"
+  echo -e "${INFO}: filesize  : ${SIZE}"
+  echo -e "${INFO}: date      : ${DATE}"
+  echo -e "${INFO}: md5sum    : ${MD5}"
+
+  if [ ! -z $2 ] && [ $2 == "-j" ] ; then
+    if [ ! -d ota ] ; then
+      mkdir ota
+    fi
+
+    # Generate ota json
+    echo -ne "{
+    build-info: {
+        \"version\"    : \"$version\",
+        \"date\"       : \"$DATE\",
+        \"filename\"   : \"$NAME\",
+        \"filesize\"   : \"$SIZE\",
+        \"md5\"        : \"$MD5\"
+    }
+}" > ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json
+  echo -e "${INFO}: json      : ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json${NC}"
+  fi
 }
 
 function search() {
