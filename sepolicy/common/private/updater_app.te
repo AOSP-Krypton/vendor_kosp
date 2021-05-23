@@ -13,6 +13,7 @@ allow updater_app autofill_service:service_manager find;
 allow updater_app gpu_service:service_manager find;
 allow updater_app surfaceflinger_service:service_manager find;
 allow updater_app tethering_service:service_manager find;
+allow updater_app thermal_service:service_manager find;
 allow updater_app update_engine_service:service_manager find;
 
 # Allow binder IPC with update_engine and gpuservice
