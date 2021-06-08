@@ -99,6 +99,11 @@ PRODUCT_DEXPREOPT_SPEED_APPS += \
 PRODUCT_PRODUCT_PROPERTIES += \
     ro.iorapd.enable=true
 
+# Disable touch video heatmap to reduce latency, motion jitter, and CPU usage
+# on supported devices with Deep Press input classifier HALs and models
+PRODUCT_PRODUCT_PROPERTIES += \
+	ro.input.video_enabled=false
+
 #Blurr
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     ro.sf.blurs_are_expensive=1 \
