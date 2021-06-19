@@ -248,10 +248,10 @@ function sign() {
   croot
   ./build/tools/releasetools/sign_target_files_apks \
          -o -d $ANDROID_BUILD_TOP/certs \
-         -p out/host/linux-x86 -v \
+         -p out/host/linux-x86 \
          $OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip signed-target_files.zip
   ./build/tools/releasetools/ota_from_target_files -k $ANDROID_BUILD_TOP/certs/releasekey \
-         -p out/host/linux-x86 -v --block \
+         -p out/host/linux-x86 --block \
          signed-target_files.zip signed-ota.zip
 }
 
