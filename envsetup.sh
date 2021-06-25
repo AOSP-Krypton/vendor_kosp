@@ -301,13 +301,12 @@ function zipup() {
 
     # Generate ota json
     echo -ne "{
-    build-info: {
-        \"version\"    : \"$version\",
-        \"date\"       : \"$DATE\",
-        \"filename\"   : \"$NAME\",
-        \"filesize\"   : \"$SIZE\",
-        \"md5\"        : \"$MD5\"
-    }
+      \"version\"    : \"$versionMajor.$versionMinor\",
+      \"date\"       : \"$DATE\",
+      \"url\"        : \"https://sourceforge.net/projects/kosp/files/KOSP-A11-Releases/$KRYPTON_BUILD/$NAME\",
+      \"filename\"   : \"$NAME\",
+      \"filesize\"   : \"$SIZE\",
+      \"md5\"        : \"$MD5\"
 }" > ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json
   echo -e "${INFO}: json      : ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json${NC}"
   fi
