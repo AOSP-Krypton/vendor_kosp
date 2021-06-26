@@ -30,7 +30,9 @@ WARN="${LP}Warning"
 
 # Add all officialy supported devices to an array
 krypton_products=()
-device=""
+device=
+
+buildDate=
 
 # Set to non gapps build by default
 GAPPS_BUILD=false
@@ -65,23 +67,21 @@ cat <<EOF
 Krypton specific functions:
 - cleanup:    Clean \$OUT directory, as well as intermediate zips if any.
 - launch:     Build a full ota.
-              Usage: launch <device | codenum> <variant> [-s] [-g] [-n] [-c]
+              Usage: launch <device | codenum> <variant> [-g] [-n] [-c]
               codenum for your device can be obtained by running: devices -p
-              -s to generate signed ota.
               -g to build gapps variant.
               -n to not wipe out directory.
               -c to do an install-clean.
               -j to generate ota json for the device.
-              Example: 'launch 1 user -sg' , or 'launch guacamole user -sg'
+              Example: 'launch 1 user -g' , or 'launch guacamole user -g'
                     Both will do a clean user build with gapps for device guacamole (codenum 1)
 - devices:    Usage: devices -p
               Prints all officially supported devices with their code numbers.
 - chk_device: Usage: chk_device <device>
               Prints whether or not device is officially supported by KOSP
-- sign:       Sign and build ota.Execute only after a successfull make.
-- zipup:      Rename the signed ota with build info.
-              Usage: zipup <variant> [-j]
-              -j to generate ota json
+- gen_info:   Print ota info like md5, size.
+              Usage: gen_info [-j]
+              -j to generate json
 - search:     Search in every file in the current directory for a string.Uses xargs for parallel search.
               Usage: search <string>
 - reposync:   Sync repo with the following default params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.
@@ -171,9 +171,9 @@ function chk_device() {
 }
 
 function launch() {
+  buildDate=$(date "+%Y%m%d")
   OPTIND=1
   local variant=""
-  local sign=false
   local wipe=true
   local installclean=false
   local json=false
@@ -186,9 +186,8 @@ function launch() {
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
 
-  while getopts ":sgncj" option; do
+  while getopts ":gncj" option; do
     case $option in
-      s) sign=true;;
       g) GAPPS_BUILD=true;;
       n) wipe=false;;
       c) installclean=true;;
@@ -211,27 +210,18 @@ function launch() {
   STATUS=$?
 
   if [ $STATUS -eq 0 ] ; then
-    make -j$(nproc --all) target-files-package otatools
+    make -j$(nproc --all) kosp
     STATUS=$?
   else
     return $STATUS
   fi
 
   if [ $STATUS -eq 0 ] ; then
-    if $sign ; then
-      sign
-      STATUS=$?
-    fi
-  else
-    return $STATUS
-  fi
-
-  if [ $STATUS -eq 0 ] ; then
     if $json ; then
-      zipup $variant "-j"
+      gen_info "-j"
       STATUS=$?
     else
-      zipup $variant
+      gen_info
       STATUS=$?
     fi
   else
@@ -244,57 +234,33 @@ function launch() {
   return $STATUS
 }
 
-function sign() {
+function gen_info() {
   croot
-  ./build/tools/releasetools/sign_target_files_apks \
-         -o -d $ANDROID_BUILD_TOP/certs \
-         -p out/host/linux-x86 \
-         $OUT/obj/PACKAGING/target_files_intermediates/*target_files*.zip signed-target_files.zip
-  ./build/tools/releasetools/ota_from_target_files -k $ANDROID_BUILD_TOP/certs/releasekey \
-         -p out/host/linux-x86 --block \
-         signed-target_files.zip signed-ota.zip
-}
 
-function zipup() {
-  croot
-  # Version info
-  versionMajor=1
-  versionMinor=0
-  version="v$versionMajor.$versionMinor"
-  TAGS=
-
-  # Check build variant and check if ota is present
-  check_variant $1
+  # Check if ota is present
   [ $? -ne 0 ] && echo -e "${ERROR}: must provide a valid build variant${NC}" && return 1
   [ -z $KRYPTON_BUILD ] && echo -e "${ERROR}: have you run lunch?${NC}" && return 1
-  [ ! -f signed-ota.zip ] && echo -e "${ERROR}: ota not found${NC}" && return 1
 
-  if $official ; then
-    TAGS+="-OFFICIAL"
-  else
-    TAGS+="-UNOFFICIAL"
-  fi
-  if $GAPPS_BUILD; then
-    TAGS+="-GAPPS"
-  else
-    TAGS+="-VANILLA"
-  fi
+  # Version (must be in sync with KryptonProps.mk)
+  versionMajor=1
+  versionMinor=0
+  version="$versionMajor.$versionMinor"
 
-  SIZE=$(du -b signed-ota.zip | awk '{print $1}')
+  FILE=$(find $OUT -type f -name "KOSP*$buildDate*.zip")
+  NAME=$(echo $FILE | sed "s|$OUT/||")
 
-  # Rename the ota with proper build info and timestamp
-  NAME="KOSP-${version}-${KRYPTON_BUILD}${TAGS}-$(date "+%Y%m%d")-${1}.zip"
-  mv signed-ota.zip $NAME
-  MD5=$(md5sum $NAME | awk '{print $1}')
+  SIZE=$(du -b $FILE | awk '{print $1}')
+  SIZEH=$(du -h $FILE | awk '{print $1}')
+  MD5=$(md5sum $FILE | awk '{print $1}')
 
-  DATE=$(cat $OUT/system/build.prop | grep "ro.build.date.utc" | sed 's|ro.build.date.utc=||')
+  DATE=$(cat $OUT/system/build.prop | grep "ro.build.date.utc" | sed 's/ro.build.date.utc=//')
 
-  echo -e "${INFO}: filename  : ${NAME}"
-  echo -e "${INFO}: filesize  : ${SIZE}"
-  echo -e "${INFO}: date      : ${DATE}"
-  echo -e "${INFO}: md5sum    : ${MD5}"
+  echo -e "${INFO}: name  : ${NAME}"
+  echo -e "${INFO}: size  : ${SIZEH} (${SIZE})"
+  echo -e "${INFO}: date  : ${DATE}"
+  echo -e "${INFO}: md5   : ${MD5}"
 
-  if [ ! -z $2 ] && [ $2 == "-j" ] ; then
+  if [ ! -z $1 ] && [ $1 == "-j" ] ; then
     if [ ! -d ota ] ; then
       mkdir ota
     fi

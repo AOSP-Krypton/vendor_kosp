@@ -205,7 +205,7 @@ KERNEL_HEADERS_INSTALL := $(KERNEL_OUT)/usr
 TARGET_PREBUILT_KERNEL := $(TARGET_PREBUILT_INT_KERNEL)
 
 # Include kernel build makefile
-include vendor/krypton/build/kernel.mk
+#include vendor/krypton/build/tasks/kernel.mk
 $(TARGET_PREBUILT_KERNEL): $(DTC)
 
 $(INSTALLED_KERNEL_TARGET): $(TARGET_PREBUILT_KERNEL) | $(ACP)
