@@ -9,6 +9,7 @@ net_domain(updater_app)
 # Allow finding various services needed for our updater app
 allow updater_app activity_service:service_manager find;
 allow updater_app activity_task_service:service_manager find;
+allow updater_app audio_service:service_manager find;
 allow updater_app autofill_service:service_manager find;
 allow updater_app gpu_service:service_manager find;
 allow updater_app surfaceflinger_service:service_manager find;
