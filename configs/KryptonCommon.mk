@@ -38,6 +38,10 @@ endif
 PRODUCT_PACKAGES += \
     KOSP-Updater
 
+# ThemePicker
+PRODUCT_PACKAGES += \
+    ThemePicker
+
 # Overlays
 PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += \
 	vendor/krypton/overlays
