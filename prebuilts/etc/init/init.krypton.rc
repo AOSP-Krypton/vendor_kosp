@@ -1,3 +1,6 @@
 # Create kosp_ota directory for our updater app
 on post-fs-data
     mkdir /data/kosp_ota 0770 system system
+    # Create directory for FOD resources
+    # It is in 777 mode because SystemUI does not belong to user system
+    mkdir /data/system/fod 0777 root system
