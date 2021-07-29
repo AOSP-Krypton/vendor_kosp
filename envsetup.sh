@@ -67,13 +67,13 @@ cat <<EOF
 Krypton specific functions:
 - cleanup:    Clean \$OUT directory, as well as intermediate zips if any.
 - launch:     Build a full ota.
-              Usage: launch <device | codenum> <variant> [-g] [-n] [-c]
+              Usage: launch <device | codenum> <variant> [-g] [-w] [-c]
               codenum for your device can be obtained by running: devices -p
               -g to build gapps variant.
-              -n to not wipe out directory.
+              -w to wipe out directory.
               -c to do an install-clean.
               -j to generate ota json for the device.
-              Example: 'launch 1 user -g' , or 'launch guacamole user -g'
+              Example: 'launch 1 user -wg' , or 'launch guacamole user -wg'
                     Both will do a clean user build with gapps for device guacamole (codenum 1)
 - devices:    Usage: devices -p
               Prints all officially supported devices with their code numbers.
@@ -174,7 +174,7 @@ function launch() {
   buildDate=$(date "+%Y%m%d")
   OPTIND=1
   local variant=""
-  local wipe=true
+  local wipe=false
   local installclean=false
   local json=false
 
@@ -186,10 +186,10 @@ function launch() {
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
 
-  while getopts ":gncj" option; do
+  while getopts ":gwcj" option; do
     case $option in
       g) GAPPS_BUILD=true;;
-      n) wipe=false;;
+      w) wipe=true;;
       c) installclean=true;;
       j) json=true;;
      \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
