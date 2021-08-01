@@ -139,3 +139,4 @@ $(call inherit-product, vendor/themes/common.mk)
 
 # Sepolicy
 $(call inherit-product, vendor/kosp/config/sepolicy.mk)
+
