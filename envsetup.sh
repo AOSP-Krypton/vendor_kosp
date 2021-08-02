@@ -260,9 +260,11 @@ function gen_info() {
   echo -e "${INFO}: date  : ${DATE}"
   echo -e "${INFO}: md5   : ${MD5}"
 
+  JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
+
   if [ ! -z $1 ] && [ $1 == "-j" ] ; then
-    if [ ! -d ota ] ; then
-      mkdir ota
+    if [ ! -d $JSON_DEVICE_DIR ] ; then
+      mkdir -p $JSON_DEVICE_DIR
     fi
 
     # Generate ota json
@@ -273,8 +275,8 @@ function gen_info() {
       \"filename\"   : \"$NAME\",
       \"filesize\"   : \"$SIZE\",
       \"md5\"        : \"$MD5\"
-}" > ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json
-  echo -e "${INFO}: json  : ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json${NC}"
+}" > $JSON_DEVICE_DIR/$KRYPTON_BUILD.json
+  echo -e "${INFO}: json  : $JSON_DEVICE_DIR/$KRYPTON_BUILD.json${NC}"
   fi
 }
 
