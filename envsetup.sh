@@ -217,6 +217,13 @@ function launch() {
   fi
 
   if [ $STATUS -eq 0 ] ; then
+    rename_zip
+    STATUS=$?
+  else
+    return $STATUS
+  fi
+
+  if [ $STATUS -eq 0 ] ; then
     if $json ; then
       gen_info "-j"
       STATUS=$?
@@ -234,6 +241,19 @@ function launch() {
   return $STATUS
 }
 
+function rename_zip() {
+  croot
+  FULL_PATH=$(find $OUT -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{print $2}')
+  FILE=$(basename $FULL_PATH)
+  FILENAME=${FILE%.*}
+  TIME=$(date "+%Y%m%d-%H%M")
+  FILE="$FILENAME-$TIME.zip"
+  DST_FILE=$OUT/$FILE
+  mv $FULL_PATH $DST_FILE
+  REL_PATH=$(realpath --relative-to="$PWD" $DST_FILE)
+  echo -e "${INFO}: Build file $REL_PATH"
+}
+
 function gen_info() {
   croot
 
@@ -246,8 +266,8 @@ function gen_info() {
   versionMinor=0
   version="$versionMajor.$versionMinor"
 
-  FILE=$(find $OUT -type f -name "KOSP*$buildDate*.zip")
-  NAME=$(echo $FILE | sed "s|$OUT/||")
+  FILE=$(find $OUT -type f -name "KOSP*.zip" -printf "%p\n" | sort -n | tail -n 1)
+  NAME=$(basename $FILE)
 
   SIZE=$(du -b $FILE | awk '{print $1}')
   SIZEH=$(du -h $FILE | awk '{print $1}')
