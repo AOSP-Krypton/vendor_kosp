@@ -274,7 +274,7 @@ function gen_info() {
       \"filesize\"   : \"$SIZE\",
       \"md5\"        : \"$MD5\"
 }" > ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json
-  echo -e "${INFO}: json      : ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json${NC}"
+  echo -e "${INFO}: json  : ota/$KRYPTON_BUILD/$KRYPTON_BUILD.json${NC}"
   fi
 }
 
