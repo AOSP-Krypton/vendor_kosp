@@ -36,6 +36,6 @@ else
 KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-VANILLA
 endif
 
-DATE_TAG := $(shell date "+%Y%m%d")
+DATE_TAG := $(shell date "+%Y%m%d-%H%M")
 
 KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-$(DATE_TAG)-$(TARGET_BUILD_VARIANT).zip
