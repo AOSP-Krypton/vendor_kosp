@@ -378,6 +378,7 @@ function merge_aosp() {
   local tag="$1"
   local platformUrl="https://android.googlesource.com/platform/"
   local url=
+  local excludeList="krypton|kosp|devicesettings|simpledeviceconfig"
   croot
   [ -z $tag ] && echo -e "${ERROR}: aosp tag cannot be empty${NC}" && return 1
   local manifest="${ANDROID_BUILD_TOP}/.repo/manifests/krypton.xml"
@@ -385,7 +386,7 @@ function merge_aosp() {
     while read line; do
       if [[ $line == *"<project"* ]] ; then
         tmp=$(echo $line | awk '{print $2}' | sed 's|path="||; s|"||')
-        if [[ -z $(echo $tmp | grep -iE "krypton|kosp|devicesettings") ]] ; then
+        if [[ -z $(echo $tmp | grep -iE $excludeList) ]] ; then
           cd $tmp
           git -C . rev-parse 2>/dev/null
           if [ $? -eq 0 ] ; then
