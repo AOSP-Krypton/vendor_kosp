@@ -56,9 +56,6 @@ PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += \
 DEVICE_PACKAGE_OVERLAYS += \
 	vendor/krypton/overlays/overlay-krypton
 
-# Sepolicy
-include vendor/krypton/sepolicy/KryptonSepolicy.mk
-
 # gms
 ifeq ($(PRODUCT_GMS_CLIENTID_BASE),)
 PRODUCT_PROPERTY_OVERRIDES += \

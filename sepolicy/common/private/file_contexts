@@ -1,5 +1,0 @@
-# ota package dir and files
-/data/kosp_ota(/.*)?            u:object_r:updater_ota_file:s0
-
-# FOD resources dir
-/data/system/fod(/.*)?          u:object_r:fod_res_file:s0

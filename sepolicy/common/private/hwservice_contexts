@@ -1,4 +1,0 @@
-vendor.krypton.touch::IGloveMode                     u:object_r:hal_krypton_touch_hwservice:s0
-vendor.krypton.touch::IKeyDisabler                   u:object_r:hal_krypton_touch_hwservice:s0
-vendor.krypton.touch::IStylusMode                    u:object_r:hal_krypton_touch_hwservice:s0
-vendor.krypton.touch::ITouchscreenGesture            u:object_r:hal_krypton_touch_hwservice:s0

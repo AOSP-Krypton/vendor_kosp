@@ -1,5 +1,0 @@
-type hal_krypton_touch_default, domain;
-hal_server_domain(hal_krypton_touch_default, hal_krypton_touch)
-
-type hal_krypton_touch_default_exec, exec_type, vendor_file_type, file_type;
-init_daemon_domain(hal_krypton_touch_default)

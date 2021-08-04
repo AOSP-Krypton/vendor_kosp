@@ -1,3 +1,0 @@
-# Use HALs
-hal_client_domain(system_server, hal_krypton_fod)
-hal_client_domain(system_server, hal_krypton_touch)

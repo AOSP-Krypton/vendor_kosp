@@ -1,6 +1,0 @@
-# Allow access to the HALs
-hal_client_domain(system_app, hal_krypton_touch)
-
-# Grant Settings app full access to FOD resources
-allow system_app fod_res_file:dir create_dir_perms;
-allow system_app fod_res_file:file create_file_perms;

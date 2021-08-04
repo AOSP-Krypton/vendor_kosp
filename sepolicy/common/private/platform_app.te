@@ -1,6 +1,0 @@
-# Allow FOD HAL service to be found
-hal_client_domain(platform_app, hal_krypton_fod)
-
-# Allow SystemUI to read FOD resources
-allow platform_app fod_res_file:dir r_dir_perms;
-allow platform_app fod_res_file:file r_file_perms;

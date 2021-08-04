@@ -1,2 +1,0 @@
-# Define security context for our updater app
-user=system seinfo=platform name=com.krypton.updater isPrivApp=true domain=updater_app type=system_app_data_file levelFrom=app

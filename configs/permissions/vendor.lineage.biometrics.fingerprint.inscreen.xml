@@ -12,5 +12,5 @@
 -->
 
 <permissions>
-    <feature name="vendor.krypton.biometrics.fingerprint.inscreen" />
+    <feature name="vendor.lineage.biometrics.fingerprint.inscreen" />
 </permissions>
