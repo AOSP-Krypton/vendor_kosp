@@ -73,6 +73,9 @@ $(foreach f,$(wildcard vendor/krypton/prebuilts/etc/init/*.rc),\
 $(foreach f,$(wildcard vendor/krypton/prebuilts/etc/permissions/*.xml),\
 	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/$(notdir $f)))
 
+$(foreach f,$(wildcard vendor/krypton/prebuilts/system_ext/etc/permissions/*.xml),\
+	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/permissions/$(notdir $f)))
+
 # Set a default release key paths
 SIGNING_KEY_PATH ?= certs
 RELEASE_KEY := $(SIGNING_KEY_PATH)/releasekey
