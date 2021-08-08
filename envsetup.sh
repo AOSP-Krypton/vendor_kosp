@@ -281,6 +281,7 @@ function gen_info() {
   echo -e "${INFO}: md5   : ${MD5}"
 
   JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
+  JSON=$JSON_DEVICE_DIR/ota.json
 
   if [ ! -z $1 ] && [ $1 == "-j" ] ; then
     if [ ! -d $JSON_DEVICE_DIR ] ; then
@@ -291,12 +292,12 @@ function gen_info() {
     echo -ne "{
       \"version\"    : \"$versionMajor.$versionMinor\",
       \"date\"       : \"$DATE\",
-      \"url\"        : \"https://sourceforge.net/projects/kosp/files/KOSP-A11-Releases/$KRYPTON_BUILD/$NAME\",
+      \"url\"        : \"https://downloads.kosp.workers.dev/0:/$KRYPTON_BUILD/$NAME\",
       \"filename\"   : \"$NAME\",
       \"filesize\"   : \"$SIZE\",
       \"md5\"        : \"$MD5\"
-}" > $JSON_DEVICE_DIR/$KRYPTON_BUILD.json
-  echo -e "${INFO}: json  : $JSON_DEVICE_DIR/$KRYPTON_BUILD.json${NC}"
+}" > $JSON
+  echo -e "${INFO}: json  : $JSON${NC}"
   fi
 }
 
