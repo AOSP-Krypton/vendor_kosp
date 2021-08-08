@@ -67,12 +67,13 @@ cat <<EOF
 Krypton specific functions:
 - cleanup:    Clean \$OUT directory, as well as intermediate zips if any.
 - launch:     Build a full ota.
-              Usage: launch <device | codenum> <variant> [-g] [-w] [-c]
+              Usage: launch <device | codenum> <variant> [-g] [-w] [-c] [-f]
               codenum for your device can be obtained by running: devices -p
               -g to build gapps variant.
               -w to wipe out directory.
               -c to do an install-clean.
               -j to generate ota json for the device.
+              -f to generate fastboot zip
               Example: 'launch 1 user -wg' , or 'launch guacamole user -wg'
                     Both will do a clean user build with gapps for device guacamole (codenum 1)
 - devices:    Usage: devices -p
@@ -177,6 +178,7 @@ function launch() {
   local wipe=false
   local installclean=false
   local json=false
+  local fastbootZip=false
 
   # Check for official devices
   chk_device $1; shift # Remove device name from options
@@ -186,12 +188,13 @@ function launch() {
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
 
-  while getopts ":gwcj" option; do
+  while getopts ":gwcjf" option; do
     case $option in
       g) GAPPS_BUILD=true;;
       w) wipe=true;;
       c) installclean=true;;
       j) json=true;;
+      f) fastbootZip=true;;
      \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
     esac
   done
@@ -233,6 +236,13 @@ function launch() {
     fi
   else
     return $STATUS
+  fi
+
+  if [ $STATUS -eq 0 ] ; then
+    if $fastbootZip ; then
+      gen_fastboot_zip
+      STATUS=$?
+    fi
   fi
 
   endTime=$(date "+%s")
@@ -299,6 +309,17 @@ function gen_info() {
 }" > $JSON
   echo -e "${INFO}: json  : $JSON${NC}"
   fi
+}
+
+function gen_fastboot_zip() {
+  local tool="./build/make/tools/releasetools/img_from_target_files"
+  local in_file=$(find $OUT/obj/PACKAGING/target_files_intermediates -type f -name "krypton_$KRYPTON_BUILD-target_files-*.zip")
+  local out_file="$OUT/fastboot-img.zip"
+  local rel_path=$(realpath --relative-to="$PWD" $out_file)
+  $tool $in_file $out_file
+  local ret=$?
+  echo -e "${INFO}: fastboot-zip  : $rel_path${NC}"
+  return $ret
 }
 
 function search() {
