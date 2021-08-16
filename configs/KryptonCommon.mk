@@ -130,7 +130,8 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 	persist.sys.disable_rescue=true \
 	net.tethering.noprovisioning=true \
 	ro.opa.eligible_device=true \
-	ro.boot.vendor.overlay.theme=com.android.internal.systemui.navbar.gestural
+	ro.boot.vendor.overlay.theme=com.android.internal.systemui.navbar.gestural \
+	log.tag.Telephony=ERROR
 
 # Charger
 PRODUCT_PACKAGES += \
