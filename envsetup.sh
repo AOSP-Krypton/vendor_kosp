@@ -272,15 +272,15 @@ function gen_info() {
   [ -z $KRYPTON_BUILD ] && echo -e "${ERROR}: have you run lunch?${NC}" && return 1
 
   # Version (must be in sync with KryptonProps.mk)
-  versionMajor=1
-  versionMinor=0
-  version="$versionMajor.$versionMinor"
+  local versionMajor=1
+  local versionMinor=0
+  local version="$versionMajor.$versionMinor"
 
   FILE=$(find $OUT -type f -name "KOSP*.zip" -printf "%p\n" | sort -n | tail -n 1)
   NAME=$(basename $FILE)
 
   SIZE=$(du -b $FILE | awk '{print $1}')
-  SIZEH=$(du -h $FILE | awk '{print $1}')
+  local SIZEH=$(du -h $FILE | awk '{print $1}')
   MD5=$(md5sum $FILE | awk '{print $1}')
 
   DATE=$(cat $OUT/system/build.prop | grep "ro.build.date.utc" | sed 's/ro.build.date.utc=//')
@@ -290,7 +290,7 @@ function gen_info() {
   echo -e "${INFO}: date  : ${DATE}"
   echo -e "${INFO}: md5   : ${MD5}"
 
-  JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
+  local JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
   JSON=$JSON_DEVICE_DIR/ota.json
 
   if [ ! -z $1 ] && [ $1 == "-j" ] ; then
