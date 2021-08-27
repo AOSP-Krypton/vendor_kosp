@@ -47,6 +47,9 @@ KRYPTON_TOOLS := $(PREBUILTS_COMMON)/krypton-tools
 
 ifneq ($(strip $(CLANG_CUSTOM_TOOLCHAIN)),)
 CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/$(strip $(CLANG_CUSTOM_TOOLCHAIN))/bin
+ifeq (,$(wildcard $(CLANG_TOOLCHAIN)/clang))
+$(error "Unable to find clang binary in $(CLANG_TOOLCHAIN)")
+endif
 else
 CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/clang-r383902b/bin
 endif
@@ -141,7 +144,7 @@ ifeq ($(KERNEL_LLVM_SUPPORT), true)
     ifeq ($(shell echo $(SDCLANG_PATH) | head -c 1),/)
        KERNEL_LLVM_BIN := $(SDCLANG_PATH)/clang
     else
-       KERNEL_LLVM_BIN := $(shell pwd)/$(SDCLANG_PATH)/clang
+       KERNEL_LLVM_BIN := $(TEMP_TOP)/$(SDCLANG_PATH)/clang
     endif
   else
      KERNEL_LLVM_BIN := $(CLANG_TOOLCHAIN)/clang #Using aosp-llvm compiler
