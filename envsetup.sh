@@ -187,7 +187,7 @@ function launch() {
   check_variant $1
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
-
+  GAPPS_BUILD=false # Reset it here everytime
   while getopts ":gwcjf" option; do
     case $option in
       g) GAPPS_BUILD=true;;
