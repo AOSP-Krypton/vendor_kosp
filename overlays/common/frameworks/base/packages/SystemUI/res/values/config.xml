@@ -47,4 +47,10 @@
     <!-- SystemUIFactory component -->
     <string name="config_systemUIFactoryComponent" translatable="false">org.protonaosp.systemui.CustomSystemUIFactory</string>
 
+    <!-- Show mic or phone affordance on Keyguard -->
+    <bool name="config_keyguardShowLeftAffordance">true</bool>
+
+    <!-- Show camera affordance on Keyguard -->
+    <bool name="config_keyguardShowCameraAffordance">true</bool>
+
 </resources>
