@@ -1,6 +1,0 @@
-#       PATH                              REPO                        REMOTE
-path="device/xiaomi/ginkgo" name="device_xiaomi_ginkgo" remote="krypton"
-path="device/xiaomi/trinket-common" name="device_xiaomi_trinket-common" remote="krypton"
-path="kernel/xiaomi/ginkgo" name="kernel_xiaomi_ginkgo" remote="krypton"
-path="vendor/xiaomi/trinket-common" name="vendor_xiaomi_trinket-common" remote="krypton"
-path="vendor/xiaomi/ginkgo" name="vendor_xiaomi_ginkgo" remote="krypton"

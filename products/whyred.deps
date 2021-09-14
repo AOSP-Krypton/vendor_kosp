@@ -1,6 +1,0 @@
-#       PATH                              REPO                        REMOTE
-path="device/xiaomi/whyred" name="device_xiaomi_whyred" remote="krypton"
-path="device/xiaomi/sdm660-common" name="device_xiaomi_sdm660-common" remote="krypton"
-path="kernel/xiaomi/sdm660" name="kernel_xiaomi_sdm660" remote="krypton"
-path="vendor/xiaomi/whyred" name="vendor_xiaomi_whyred" remote="krypton"
-path="vendor/xiaomi/sdm660-common" name="vendor_xiaomi_sdm660-common" remote="krypton"
