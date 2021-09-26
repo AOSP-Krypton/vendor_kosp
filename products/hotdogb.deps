@@ -1,7 +1,7 @@
 #       PATH                              REPO                        REMOTE
 path="device/oneplus/hotdogb" name="device_oneplus_hotdogb" remote="krypton"
 path="device/oneplus/sm8150-common" name="device_oneplus_sm8150-common" remote="krypton"
-path="device/oneplus/common" name="device_oneplus_common" remote="krypton"
+path="hardware/oneplus" name="hardware_oneplus" remote="krypton" revision="A11"
 path="kernel/oneplus/sm8150" name="kernel_oneplus_sm8150" remote="krypton"
 path="vendor/oneplus/apps" name="vendor_oneplus_apps" remote="krypton-gitlab" revision="A11"
 path="vendor/oneplus/sm8150-common" name="vendor_oneplus_sm8150-common" remote="krypton"
