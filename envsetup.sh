@@ -400,7 +400,7 @@ function merge_aosp() {
   local tag="$1"
   local platformUrl="https://android.googlesource.com/platform/"
   local url=
-  local excludeList="krypton|kosp|simpledeviceconfig|lineage|vendor/qcom"
+  local excludeList="krypton|kosp|simpledeviceconfig|lineage|vendor/qcom|clang"
   croot
   [ -z $tag ] && echo -e "${ERROR}: aosp tag cannot be empty${NC}" && return 1
   local manifest="${ANDROID_BUILD_TOP}/.repo/manifests/krypton.xml"
