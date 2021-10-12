@@ -45,7 +45,7 @@ $(foreach v,$(EXPORT_TO_SOONG),$(eval $(call addVar,$(v))))
 SOONG_CONFIG_NAMESPACES += kryptonGlobalVars
 SOONG_CONFIG_kryptonGlobalVars += \
     target_init_vendor_lib \
-    target_surfaceflinger_fod_lib \
+    target_surfaceflinger_udfps_lib \
     target_ld_shim_libs \
     has_legacy_camera_hal1 \
     camera_needs_client_info \
@@ -60,7 +60,7 @@ SOONG_CONFIG_kryptonQcomVars += \
 
 # Set default values
 TARGET_INIT_VENDOR_LIB ?= vendor_init
-TARGET_SURFACEFLINGER_FOD_LIB ?= surfaceflinger_fod_lib
+TARGET_SURFACEFLINGER_UDFPS_LIB ?= surfaceflinger_udfps_lib
 BOOTLOADER_MESSAGE_OFFSET ?= 0
 
 # Soong bool variables
@@ -68,7 +68,7 @@ SOONG_CONFIG_kryptonQcomVars_uses_pre_uplink_features_netmgrd := $(TARGET_USES_P
 
 # Soong value variables
 SOONG_CONFIG_kryptonGlobalVars_target_init_vendor_lib := $(TARGET_INIT_VENDOR_LIB)
-SOONG_CONFIG_kryptonGlobalVars_target_surfaceflinger_fod_lib := $(TARGET_SURFACEFLINGER_FOD_LIB)
+SOONG_CONFIG_kryptonGlobalVars_target_surfaceflinger_udfps_lib := $(TARGET_SURFACEFLINGER_UDFPS_LIB)
 SOONG_CONFIG_kryptonGlobalVars_target_ld_shim_libs := $(subst $(space),:,$(TARGET_LD_SHIM_LIBS))
 SOONG_CONFIG_kryptonGlobalVars_has_legacy_camera_hal1 := $(TARGET_HAS_LEGACY_CAMERA_HAL1)
 SOONG_CONFIG_kryptonGlobalVars_camera_needs_client_info := $(TARGET_CAMERA_NEEDS_CLIENT_INFO)
