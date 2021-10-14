@@ -22,10 +22,12 @@ krypton_generator {
 
     // The headers make command
     cmd: "$(PATH_OVERRIDE_SOONG) " +
-         "$(MAKE) $(KERNEL_MAKE_FLAGS) -C $(TARGET_KERNEL_SOURCE) " +
+         "$(MAKE) -C $(TARGET_KERNEL_SOURCE) " +
          "O=$(BUILD_ROOT_LOC)$(genDir) " +
+         "$(TARGET_KERNEL_MAKE_ENV_SOONG) " +
          "ARCH=$(KERNEL_ARCH) " +
-         "$(KERNEL_CROSS_COMPILE) " +
+         "CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) " +
+         "CROSS_COMPILE_ARM32=$(KERNEL_CROSS_COMPILE_ARM32) " +
          "headers_install ",
 
     // Directories that can be imported by a cc_* module generated_headers property
