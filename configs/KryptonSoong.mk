@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # Krypton soong configs
+PATH_OVERRIDE_SOONG := $(shell echo $(PATH_OVERRIDE) | sed -e 's|$$|$$$$|g')
 
 # Add variables that we wish to make available to soong here.
 EXPORT_TO_SOONG := \
@@ -20,6 +21,7 @@ EXPORT_TO_SOONG := \
     KERNEL_CROSS_COMPILE \
     KERNEL_MAKE_FLAGS \
     MAKE \
+    PATH_OVERRIDE_SOONG \
     TARGET_KERNEL_CONFIG \
     TARGET_KERNEL_SOURCE
 
