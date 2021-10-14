@@ -17,6 +17,7 @@ PATH_OVERRIDE_SOONG := $(shell echo $(PATH_OVERRIDE) | sed -e 's|$$|$$$$|g')
 
 # Add variables that we wish to make available to soong here.
 EXPORT_TO_SOONG := \
+    BUILD_ROOT_LOC \
     KERNEL_ARCH \
     KERNEL_CROSS_COMPILE \
     KERNEL_MAKE_FLAGS \
