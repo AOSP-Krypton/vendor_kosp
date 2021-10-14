@@ -51,7 +51,7 @@ ifeq (,$(wildcard $(CLANG_TOOLCHAIN)/clang))
 $(error "Unable to find clang binary in $(CLANG_TOOLCHAIN)")
 endif
 else
-CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/clang-r383902b/bin
+CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/clang-r416183b/bin
 endif
 
 HOST_GCC_TOOLCHAIN := $(PREBUILTS_COMMON)/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/bin
@@ -79,7 +79,7 @@ BOARD_PREBUILT_DTBOIMAGE := $(PRODUCT_OUT)/prebuilt_dtbo.img
 endif
 
 #Android makefile to build kernel as a part of Android Build
-PERL		= perl
+PERL = perl
 
 KERNEL_TARGET := $(strip $(INSTALLED_KERNEL_TARGET))
 ifeq ($(KERNEL_TARGET),)
