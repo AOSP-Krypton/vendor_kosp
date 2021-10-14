@@ -25,6 +25,9 @@ else ifneq ($(filter $(TARGET_BOARD_PLATFORM),$(QCOM_TRINKET)),)
 QCOM_BOARD_PATH := sm6125
 endif
 
+LIBION_HEADER_PATHS := system/memory/libion/include \
+                      system/memory/libion/kernel-headers
+
 # Soong namespaces and common flags
 PRODUCT_SOONG_NAMESPACES += \
     hardware/qcom-caf/$(QCOM_BOARD_PATH) \
