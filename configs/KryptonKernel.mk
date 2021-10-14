@@ -46,23 +46,24 @@ KERNEL_LLVM_SUPPORT := true
 KRYPTON_TOOLS := $(PREBUILTS_COMMON)/krypton-tools
 
 ifneq ($(strip $(CLANG_CUSTOM_TOOLCHAIN)),)
-CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/$(strip $(CLANG_CUSTOM_TOOLCHAIN))/bin
+CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/$(HOST_PREBUILT_TAG)/$(strip $(CLANG_CUSTOM_TOOLCHAIN))/bin
 ifeq (,$(wildcard $(CLANG_TOOLCHAIN)/clang))
 $(error "Unable to find clang binary in $(CLANG_TOOLCHAIN)")
 endif
 else
-CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/linux-x86/clang-r416183b/bin
+CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/$(HOST_PREBUILT_TAG)/clang-r416183b/bin
 endif
 
-HOST_GCC_TOOLCHAIN := $(PREBUILTS_COMMON)/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/bin
+HOST_GCC_TOOLCHAIN := $(PREBUILTS_COMMON)/gcc/$(HOST_PREBUILT_TAG)/host/x86_64-linux-glibc2.17-4.8/bin
 PATH_OVERRIDE := \
-    PATH=$(KRYPTON_TOOLS)/linux-x86/bin:$(CLANG_TOOLCHAIN):$$PATH \
+    PATH=$(KRYPTON_TOOLS)/$(HOST_PREBUILT_TAG)/bin:$(CLANG_TOOLCHAIN):$$PATH \
     PERL5LIB=$(KRYPTON_TOOLS)/common/perl-base
-CPIO := $(KRYPTON_TOOLS)/linux-x86/bin/cpio
-MAKE := $(PREBUILTS_COMMON)/build-tools/linux-x86/bin/make -j$(shell $(KRYPTON_TOOLS)/linux-x86/bin/nproc --all)
+CPIO := $(KRYPTON_TOOLS)/$(HOST_PREBUILT_TAG)/bin/cpio
+MAKE := $(PREBUILTS_COMMON)/build-tools/$(HOST_PREBUILT_TAG)/bin/make -j$(shell $(KRYPTON_TOOLS)/$(HOST_PREBUILT_TAG)/bin/nproc --all)
 
 DTC := $(HOST_OUT_EXECUTABLES)/dtc$(HOST_EXECUTABLE_SUFFIX)
 
+TARGET_KERNEL_MAKE_ENV += $(PATH_OVERRIDE)
 TARGET_KERNEL_MAKE_ENV := DTC_EXT=$(TEMP_TOP)/$(DTC)
 TARGET_KERNEL_MAKE_ENV += HOSTCC=$(CLANG_TOOLCHAIN)/clang
 TARGET_KERNEL_MAKE_ENV += HOSTAR=$(HOST_GCC_TOOLCHAIN)/x86_64-linux-ar
@@ -70,7 +71,6 @@ TARGET_KERNEL_MAKE_ENV += HOSTLD=$(HOST_GCC_TOOLCHAIN)/x86_64-linux-ld
 TARGET_KERNEL_MAKE_ENV += HOSTCFLAGS="-I/usr/include -I/usr/include/x86_64-linux-gnu -L/usr/lib -L/usr/lib/x86_64-linux-gnu -fuse-ld=lld"
 TARGET_KERNEL_MAKE_ENV += HOSTLDFLAGS="-L/usr/lib -L/usr/lib/x86_64-linux-gnu -fuse-ld=lld"
 TARGET_KERNEL_MAKE_ENV += $(TARGET_KERNEL_ADDITIONAL_FLAGS)
-TARGET_KERNEL_MAKE_ENV += $(PATH_OVERRIDE)
 TARGET_KERNEL_DISABLE_DEBUGFS := true
 
 # Build dtbo
@@ -151,7 +151,6 @@ ifeq ($(KERNEL_LLVM_SUPPORT), true)
   endif
 endif
 
-KERNEL_GCC_NOANDROID_CHK := $(shell (echo "int main() {return 0;}" | $(KERNEL_CROSS_COMPILE)gcc -E -mno-android - > /dev/null 2>&1 ; echo $$?))
 cc :=
 ifeq ($(KERNEL_LLVM_SUPPORT),true)
   ifeq ($(KERNEL_ARCH), arm64)
@@ -159,10 +158,6 @@ ifeq ($(KERNEL_LLVM_SUPPORT),true)
   else
 	cc := CC=$(KERNEL_LLVM_BIN) CLANG_TRIPLE=arm-linux-gnueabihf
   endif
-else
-ifeq ($(strip $(KERNEL_GCC_NOANDROID_CHK)),0)
-KERNEL_CFLAGS := KCFLAGS=-mno-android
-endif
 endif
 
 BUILD_ROOT_LOC := $(TEMP_TOP)/
@@ -185,7 +180,7 @@ KERNEL_CONFIG := $(KERNEL_OUT)/.config
 
 ifeq ($(KERNEL_DEFCONFIG)$(wildcard $(KERNEL_CONFIG)),)
 $(error Kernel configuration not defined, cannot build kernel)
-else
+endif
 
 ifeq ($(BOARD_KERNEL_IMAGE_NAME),)
 ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
@@ -214,5 +209,4 @@ $(TARGET_PREBUILT_KERNEL): $(DTC)
 $(INSTALLED_KERNEL_TARGET): $(TARGET_PREBUILT_KERNEL) | $(ACP)
 	$(transform-prebuilt-to-target)
 
-endif
 endif
