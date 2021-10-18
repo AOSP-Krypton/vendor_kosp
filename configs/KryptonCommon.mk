@@ -32,6 +32,7 @@ PRODUCT_COPY_FILES += \
 
 # Inherit gapps if GAPPS_BUILD env variable is set
 ifeq ($(GAPPS_BUILD),true)
+$(call inherit-product, vendor/google/gms/config.mk)
 $(call inherit-product, vendor/google/pixel/config.mk)
 else
 
