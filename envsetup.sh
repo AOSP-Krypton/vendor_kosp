@@ -99,8 +99,10 @@ Krypton specific functions:
                   Usage: syncpixelgapps [-i]
                   -i to initialize git lfs in all the source repos
 - merge_aosp: Fetch and merge the given tag from aosp source for the repos forked from aosp in krypton.xml
-              Usage: merge_aosp <tag>
-              Example: merge_aosp android-11.0.0_r37
+              Usage: merge_aosp -t <tag> [-p]
+              -t for aosp tag to merge
+              -p to push to github for all repos
+              Example: merge_aosp -t android-12.0.0_r2 -p
 EOF
 }
 
@@ -271,11 +273,6 @@ function gen_info() {
   [ $? -ne 0 ] && echo -e "${ERROR}: must provide a valid build variant${NC}" && return 1
   [ -z $KRYPTON_BUILD ] && echo -e "${ERROR}: have you run lunch?${NC}" && return 1
 
-  # Version (must be in sync with KryptonProps.mk)
-  local versionMajor=1
-  local versionMinor=0
-  local version="$versionMajor.$versionMinor"
-
   FILE=$(find $OUT -type f -name "KOSP*.zip" -printf "%p\n" | sort -n | tail -n 1)
   NAME=$(basename $FILE)
 
@@ -283,7 +280,7 @@ function gen_info() {
   local SIZEH=$(du -h $FILE | awk '{print $1}')
   MD5=$(md5sum $FILE | awk '{print $1}')
 
-  DATE=$(cat $OUT/system/build.prop | grep "ro.build.date.utc" | sed 's/ro.build.date.utc=//')
+  DATE=$(get_prop_value ro.build.date.utc)
 
   echo -e "${INFO}: name  : ${NAME}"
   echo -e "${INFO}: size  : ${SIZEH} (${SIZE})"
@@ -298,9 +295,11 @@ function gen_info() {
       mkdir -p $JSON_DEVICE_DIR
     fi
 
+    local VERSION=$(get_prop_value ro.krypton.build.version)
+
     # Generate ota json
     echo -ne "{
-      \"version\"    : \"$versionMajor.$versionMinor\",
+      \"version\"    : \"$VERSION\",
       \"date\"       : \"$DATE\",
       \"url\"        : \"https://downloads.kosp.workers.dev/0:/$KRYPTON_BUILD/$NAME\",
       \"filename\"   : \"$NAME\",
@@ -309,6 +308,10 @@ function gen_info() {
 }" > $JSON
   echo -e "${INFO}: json  : $JSON${NC}"
   fi
+}
+
+function get_prop_value() {
+  cat $OUT/system/build.prop | grep $1 | sed "s/$1=//"
 }
 
 function gen_fastboot_zip() {
@@ -397,57 +400,68 @@ function keygen() {
 }
 
 function merge_aosp() {
-  local tag="$1"
+  OPTIND=1
+  local tag=
+  local push=false
+
+  while getopts ":t:p" option; do
+    case $option in
+      t) tag=$OPTARG;;
+      p) push=true;;
+     \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
+    esac
+  done
+
   local platformUrl="https://android.googlesource.com/platform/"
   local url=
-  local excludeList="krypton|kosp|simpledeviceconfig|lineage|vendor/qcom|clang"
+  local excludeList="krypton|kosp|lineage|vendor/qcom|clang"
+
   croot
   [ -z $tag ] && echo -e "${ERROR}: aosp tag cannot be empty${NC}" && return 1
-  local manifest="${ANDROID_BUILD_TOP}/.repo/manifests/krypton.xml"
+  local manifest="${ANDROID_BUILD_TOP}/.repo/manifests/snippets/krypton.xml"
   if [ -f $manifest ] ; then
     while read line; do
       if [[ $line == *"<project"* ]] ; then
         tmp=$(echo $line | awk '{print $2}' | sed 's|path="||; s|"||')
-        if [[ -z $(echo $tmp | grep -iE $excludeList) ]] ; then
+        isExcluded=$(echo $tmp | grep -iE $excludeList)
+        if [[ ! -z $isExcluded ]] ; then
+          continue
+        fi
+        git -C $tmp rev-parse 2>/dev/null
+        if [ $? -eq 0 ] ; then
           cd $tmp
-          git -C . rev-parse 2>/dev/null
+          if [ $tmp == "build/make" ] ; then
+            url="${platformUrl}build"
+          else
+            url="$platformUrl$tmp"
+          fi
+          remoteName=$(git remote -v | grep -m 1 "$url" | awk '{print $1}')
+          if [ -z $remoteName ] ; then
+            echo "adding remote for $tmp"
+            remoteName="aosp"
+            git remote add $remoteName $url
+          fi
+          echo -e "${INFO}: merging tag $tag in $tmp${NC}"
+          git fetch $remoteName $tag && git merge FETCH_HEAD
           if [ $? -eq 0 ] ; then
-            if [ $tmp == "build/make" ] ; then
-              url="${platformUrl}build"
-            else
-              url="$platformUrl$tmp"
-            fi
-            remoteName=$(git remote -v | grep -m 1 "$url" | awk '{print $1}')
-            if [ -z $remoteName ] ; then
-              echo "adding remote for $tmp"
-              remoteName="aosp"
-              git remote add $remoteName $url
-            fi
-            # skip system/core as we have rebased this repo, manually cherry-pick the patches
-            if [[ $tmp == "system/core" ]] ; then
-              echo -e "${INFO}: skipping $tmp, please do a manual merge${NC}"
-              croot
-              continue
-            fi
-            echo -e "${INFO}: merging tag $tag in $tmp${NC}"
-            git fetch $remoteName $tag && git merge FETCH_HEAD
-            if [ $? -eq 0 ] ; then
-              echo -e "${INFO}: merged tag $tag${NC}"
-              git push krypton HEAD:A11
+            echo -e "${INFO}: merged tag $tag${NC}"
+            if $push ; then
+              git push krypton HEAD:A12
               if [ $? -ne 0 ] ; then
                 echo -e "${ERROR}: pushing changes failed, please do a manual push${NC}"
+                return 1
               fi
-            else
-              echo -e "${ERROR}: merging tag $tag failed, please do a manual merge${NC}"
-              croot
-              return 1
             fi
           else
-            echo -e "${ERROR}: $tmp is not a git repo${NC}"
+            echo -e "${ERROR}: merging tag $tag failed, please do a manual merge${NC}"
             croot
             return 1
           fi
           croot
+        else
+          echo -e "${ERROR}: $tmp is not a git repo${NC}"
+          croot
+          return 1
         fi
       fi
     done < $manifest
