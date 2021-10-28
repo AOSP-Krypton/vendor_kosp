@@ -92,12 +92,6 @@ Krypton specific functions:
 - keygen:     Generate keys for signing builds.
               Usage: keygen <dir>
               Default dir is ${ANDROID_BUILD_TOP}/certs
-- syncopengapps:  Sync OpenGapps repos.
-                  Usage: syncgapps [-i]
-                  -i to initialize git lfs in all the source repos
-- syncpixelgapps:  Sync our Gapps repo.
-                  Usage: syncpixelgapps [-i]
-                  -i to initialize git lfs in all the source repos
 - merge_aosp: Fetch and merge the given tag from aosp source for the repos forked from aosp in krypton.xml
               Usage: merge_aosp -t <tag> [-p]
               -t for aosp tag to merge
@@ -334,51 +328,6 @@ function reposync() {
   local SYNC_ARGS="--no-clone-bundle --no-tags --current-branch"
   repo sync -j$(nproc --all) $SYNC_ARGS $*
   return $?
-}
-
-function syncopengapps() {
-  local sourceroot="${ANDROID_BUILD_TOP}/vendor/opengapps/sources"
-  [ ! -d $sourceroot ] && echo "${ERROR}: OpenGapps repo has not been synced!${NC}" && return 1
-  local all="${sourceroot}/all"
-  local arm="${sourceroot}/arm"
-  local arm64="${sourceroot}/arm64"
-
-  # Initialize git lfs in the repo
-  if [ ! -z $1 ] ; then
-    if [ $1 == "-i" ] ; then
-      for dir in $all $arm $arm64; do
-        cd $dir && git lfs install
-      done
-    fi
-  fi
-
-  # Fetch files
-  for dir in $all $arm $arm64; do
-    cd $dir && git lfs fetch && git lfs checkout
-  done
-  croot
-}
-
-function syncpixelgapps() {
-  local sourceroot="${ANDROID_BUILD_TOP}/vendor/google"
-  [ ! -d $sourceroot ] && echo "${ERROR}: Gapps repo has not been synced!${NC}" && return 1
-  local gms="${sourceroot}/gms"
-  local pixel="${sourceroot}/pixel"
-
-  # Initialize git lfs in the repo
-  if [ ! -z $1 ] ; then
-    if [ $1 == "-i" ] ; then
-      for dir in $gms $pixel; do
-        cd $dir && git lfs install
-      done
-    fi
-  fi
-
-  # Fetch files
-  for dir in $gms $pixel; do
-    cd $dir && git lfs fetch && git lfs checkout
-  done
-  croot
 }
 
 function keygen() {
