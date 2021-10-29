@@ -56,7 +56,8 @@ SOONG_CONFIG_kryptonQcomVars += \
     uses_pre_uplink_features_netmgrd \
     supports_hw_fde \
     supports_hw_fde_perf \
-    uses_qti_camera_device
+    uses_qti_camera_device \
+    qcom_display_headers_namespace
 
 # Set default values
 TARGET_INIT_VENDOR_LIB ?= vendor_init
@@ -76,3 +77,4 @@ SOONG_CONFIG_kryptonGlobalVars_bootloader_message_offset := $(BOOTLOADER_MESSAGE
 SOONG_CONFIG_kryptonQcomVars_supports_hw_fde := $(TARGET_HW_DISK_ENCRYPTION)
 SOONG_CONFIG_kryptonQcomVars_supports_hw_fde_perf := $(TARGET_HW_DISK_ENCRYPTION_PERF)
 SOONG_CONFIG_kryptonQcomVars_uses_qti_camera_device := $(TARGET_USES_QTI_CAMERA_DEVICE)
+SOONG_CONFIG_kryptonQcomVars_qcom_display_headers_namespace := vendor/qcom/opensource/display-commonsys-intf
