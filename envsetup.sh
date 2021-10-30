@@ -395,7 +395,7 @@ function merge_aosp() {
           if [ $? -eq 0 ] ; then
             echo -e "${INFO}: merged tag $tag${NC}"
             if $push ; then
-              git push krypton HEAD:A12
+              git push krypton-ssh HEAD:A12
               if [ $? -ne 0 ] ; then
                 echo -e "${ERROR}: pushing changes failed, please do a manual push${NC}"
                 return 1
