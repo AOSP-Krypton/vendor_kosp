@@ -1,0 +1,7 @@
+#       PATH                              REPO                        REMOTE
+path="device/oneplus/guacamoleb" name="device_oneplus_guacamoleb" remote="krypton-ssh" revision="A12"
+path="device/oneplus/sm8150-common" name="device_oneplus_sm8150-common" remote="krypton-ssh" revision="A12"
+path="hardware/oneplus" name="hardware_oneplus" remote="krypton-ssh" revision="A12"
+path="kernel/oneplus/sm8150" name="kernel_oneplus_sm8150" remote="krypton-ssh" revision="A12"
+path="vendor/oneplus/guacamoleb" name="vendor_oneplus_guacamoleb" remote="krypton-ssh" revision="A12"
+path="vendor/oneplus/sm8150-common" name="vendor_oneplus_sm8150-common" remote="krypton-ssh" revision="A12"
