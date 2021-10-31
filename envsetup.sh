@@ -152,13 +152,13 @@ function chk_device() {
   for entry in ${krypton_products[@]}; do
     local product=${entry%:*}
     local product_num=${entry#*:}
-    if [ $1 == $product_num ] || [ $1 == $product ] ; then
+    if [ "$1" == "$product_num" ] || [ "$1" == "$product" ] ; then
       device="$product"
       official=true
       break
     fi
   done
-  [ -z $device ] && device="$1"
+  [ -z "$device" ] && device="$1"
   # Show official or unofficial status
   if $official ; then
     echo -e "${INFO}: device $device is officially supported by KOSP${NC}"
