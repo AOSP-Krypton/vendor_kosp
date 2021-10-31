@@ -309,11 +309,20 @@ function get_prop_value() {
 }
 
 function gen_fastboot_zip() {
-  local tool="./build/make/tools/releasetools/img_from_target_files"
+  if [ ! -f "out/host/linux-x86/bin/img_from_target_files" ]; then
+    make -j8 img_from_target_files
+  fi
+  local tool="out/host/linux-x86/bin/img_from_target_files"
   local in_file=$(find $OUT/obj/PACKAGING/target_files_intermediates -type f -name "krypton_$KRYPTON_BUILD-target_files-*.zip")
   local out_file="$OUT/fastboot-img.zip"
   local rel_path=$(realpath --relative-to="$PWD" $out_file)
   $tool $in_file $out_file
+  mkdir -p $OUT/fboot-tmp
+  unzip -q $out_file -d $OUT/fboot-tmp
+  cd $OUT/fboot-tmp
+  zip -r -6 $OUT/${NAME%.*}-img.zip *
+  croot
+  rm -rf $OUT/fboot-tmp
   local ret=$?
   echo -e "${INFO}: fastboot-zip  : $rel_path${NC}"
   return $ret
