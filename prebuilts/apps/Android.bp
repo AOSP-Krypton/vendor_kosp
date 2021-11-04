@@ -8,3 +8,14 @@ android_app_import {
     },
     privileged: true,
 }
+
+android_app_import {
+    name: "Via",
+    owner: "viayoo",
+    apk: "via/via.apk",
+    presigned: true,
+    dex_preopt: {
+        enabled: false,
+    },
+    product_specific: true,
+}

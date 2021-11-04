@@ -164,3 +164,9 @@ TARGET_BUILD_LAWNCHAIR ?= true
 ifeq ($(strip $(TARGET_BUILD_LAWNCHAIR)),true)
 include vendor/lawnchair/lawnchair.mk
 endif
+
+TARGET_BUILD_VIA_BROWSER ?= true
+ifeq ($(strip $(TARGET_BUILD_VIA_BROWSER)),true)
+PRODUCT_PACKAGES += \
+    Via
+endif
