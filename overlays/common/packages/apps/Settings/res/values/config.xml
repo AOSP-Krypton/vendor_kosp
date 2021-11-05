@@ -15,10 +15,6 @@
 -->
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- Package name and fully-qualified class name for the styles & wallpaper activity. -->
-    <string name="config_styles_and_wallpaper_picker_package" translatable="false">com.android.wallpaper</string>
-    <string name="config_styles_and_wallpaper_picker_class">com.android.customization.picker.CustomizationPickerActivity</string>
-
     <!-- Whether or not device header widget tile should display in device info page -->
     <bool name="config_show_device_header_in_device_info">false</bool>
 
