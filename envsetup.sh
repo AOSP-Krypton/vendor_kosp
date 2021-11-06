@@ -262,6 +262,7 @@ function rename_zip() {
 
 function gen_info() {
   croot
+  GIT_BRANCH="A12"
 
   # Check if ota is present
   [ $? -ne 0 ] && echo -e "${ERROR}: must provide a valid build variant${NC}" && return 1
@@ -296,7 +297,7 @@ function gen_info() {
     echo -ne "{
       \"version\"    : \"$VERSION\",
       \"date\"       : \"$DATE\",
-      \"url\"        : \"https://downloads.kosp.workers.dev/0:/$KRYPTON_BUILD/$NAME\",
+      \"url\"        : \"https://downloads.kosp.workers.dev/0:/$GIT_BRANCH/$KRYPTON_BUILD/$NAME\",
       \"filename\"   : \"$NAME\",
       \"filesize\"   : \"$SIZE\",
       \"md5\"        : \"$MD5\"
