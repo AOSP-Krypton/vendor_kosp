@@ -275,11 +275,12 @@ function gen_info() {
   MD5=$(md5sum $FILE | awk '{print $1}')
 
   DATE=$(get_prop_value ro.build.date.utc)
+  DATE=$(expr "$DATE" '*' 1000)
 
   echo -e "${INFO}: name  : ${NAME}"
-  echo -e "${INFO}: size  : ${SIZEH} (${SIZE})"
-  echo -e "${INFO}: date  : ${DATE}"
-  echo -e "${INFO}: md5   : ${MD5}"
+  echo -e "Info: size  : ${SIZEH} (${SIZE})"
+  echo -e "Info: date  : ${DATE}"
+  echo -e "Info: md5   : ${MD5}${NC}"
 
   local JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
   JSON=$JSON_DEVICE_DIR/ota.json
