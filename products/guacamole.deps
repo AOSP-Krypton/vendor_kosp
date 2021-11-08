@@ -5,3 +5,4 @@ path="hardware/oneplus" name="hardware_oneplus" remote="krypton-ssh" revision="A
 path="kernel/oneplus/sm8150" name="kernel_oneplus_sm8150" remote="krypton-ssh" revision="A12"
 path="vendor/oneplus/guacamole" name="vendor_oneplus_guacamole" remote="krypton-ssh" revision="A12"
 path="vendor/oneplus/sm8150-common" name="vendor_oneplus_sm8150-common" remote="krypton-ssh" revision="A12"
+path="vendor/oneplus/apps" name="vendor_oneplus_apps" remote="krypton-gitlab"
