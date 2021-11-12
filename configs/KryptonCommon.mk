@@ -170,3 +170,9 @@ ifeq ($(strip $(TARGET_BUILD_VIA_BROWSER)),true)
 PRODUCT_PACKAGES += \
     Via
 endif
+
+TARGET_BUILD_MATLOG ?= true
+ifeq ($(strip $(TARGET_BUILD_MATLOG)),true)
+PRODUCT_PACKAGES += \
+    Matlog
+endif
