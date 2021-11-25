@@ -176,3 +176,7 @@ ifeq ($(strip $(TARGET_BUILD_MATLOG)),true)
 PRODUCT_PACKAGES += \
     Matlog
 endif
+
+# RRO Overlays
+PRODUCT_PACKAGES += \
+    NavigationBarModeGesturalOverlayFS
