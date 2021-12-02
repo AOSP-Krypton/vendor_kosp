@@ -83,6 +83,10 @@ $(foreach f,$(wildcard vendor/krypton/prebuilts/etc/permissions/*.xml),\
 $(foreach f,$(wildcard vendor/krypton/prebuilts/system_ext/etc/permissions/*.xml),\
 	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/permissions/$(notdir $f)))
 
+# Sysconfig
+$(foreach f,$(wildcard vendor/krypton/prebuilts/product/etc/sysconfig/*.xml),\
+	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_PRODUCT)/etc/sysconfig/$(notdir $f)))
+
 # Set a default release key paths
 SIGNING_KEY_PATH ?= certs
 RELEASE_KEY := $(SIGNING_KEY_PATH)/releasekey
@@ -179,4 +183,36 @@ endif
 
 # RRO Overlays
 PRODUCT_PACKAGES += \
-    NavigationBarModeGesturalOverlayFS
+    NavigationBarModeGesturalOverlayFS \
+    IconPackCircularAndroidOverlay \
+	IconPackCircularLauncherOverlay \
+	IconPackCircularSettingsOverlay \
+	IconPackCircularSystemUIOverlay \
+	IconPackCircularThemePickerOverlay \
+	IconPackVictorAndroidOverlay \
+	IconPackVictorLauncherOverlay \
+	IconPackVictorSettingsOverlay \
+	IconPackVictorSystemUIOverlay \
+	IconPackVictorThemePickerOverlay \
+	IconPackSamAndroidOverlay \
+	IconPackSamLauncherOverlay \
+	IconPackSamSettingsOverlay \
+	IconPackSamSystemUIOverlay \
+	IconPackSamThemePickerOverlay \
+	IconPackKaiAndroidOverlay \
+	IconPackKaiLauncherOverlay \
+	IconPackKaiSettingsOverlay \
+	IconPackKaiSystemUIOverlay \
+	IconPackKaiThemePickerOverlay \
+	IconPackFilledAndroidOverlay \
+	IconPackFilledLauncherOverlay \
+	IconPackFilledSettingsOverlay \
+	IconPackFilledSystemUIOverlay \
+	IconPackFilledThemePickerOverlay \
+	IconPackRoundedAndroidOverlay \
+	IconPackRoundedLauncherOverlay \
+	IconPackRoundedSettingsOverlay \
+	IconPackRoundedSystemUIOverlay \
+	IconPackRoundedThemePickerOverlay \
+	IconPackOOSAndroidOverlay \
+	IconPackOOSSystemUIOverlay
