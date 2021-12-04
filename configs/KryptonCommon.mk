@@ -184,3 +184,6 @@ endif
 # RRO Overlays
 PRODUCT_PACKAGES += \
     NavigationBarModeGesturalOverlayFS
+
+# Themes
+$(call inherit-product, vendor/themes/common.mk)
