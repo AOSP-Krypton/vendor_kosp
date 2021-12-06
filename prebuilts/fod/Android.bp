@@ -1,9 +1,0 @@
-android_library {
-    name: "FODResources",
-    resource_dirs: [
-        "fod-anims/res",
-        "fod-icons/res",
-    ],
-    platform_apis: true,
-    system_ext_specific: true,
-}

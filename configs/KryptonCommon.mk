@@ -26,10 +26,6 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
 	vendor/krypton/prebuilts/etc/apns-conf.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/apns-conf.xml
 
-# Font config template
-PRODUCT_COPY_FILES += \
-    vendor/krypton/prebuilts/etc/custom_font_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/custom_font_config.xml
-
 # Inherit gapps if GAPPS_BUILD env variable is set
 ifeq ($(GAPPS_BUILD),true)
 $(call inherit-product, vendor/google/gms/config.mk)
