@@ -199,14 +199,16 @@ function launch() {
   # Execute rest of the commands now as all vars are set.
   timeStart=$(date "+%s")
 
+  lunch krypton_$device-$variant
+
   if $wipe ; then
     cleanup
   elif $installclean ; then
     make install-clean
   fi
 
-  lunch krypton_$device-$variant
   STATUS=$?
+  
 
   if [ $STATUS -eq 0 ] ; then
     make -j$(nproc --all) kosp
