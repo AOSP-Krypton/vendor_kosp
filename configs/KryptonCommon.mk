@@ -163,6 +163,8 @@ PRODUCT_PRODUCT_PROPERTIES += \
 TARGET_BUILD_LAWNCHAIR ?= true
 ifeq ($(strip $(TARGET_BUILD_LAWNCHAIR)),true)
 include vendor/lawnchair/lawnchair.mk
+# Lawnicons
+$(call inherit-product-if-exists, vendor/lawnicons/overlay.mk)
 endif
 
 TARGET_BUILD_VIA_BROWSER ?= true
