@@ -177,6 +177,12 @@ PRODUCT_PACKAGES += \
     Matlog
 endif
 
+TARGET_BUILD_GRAPHENEOS_CAMERA ?= true
+ifeq ($(strip $(TARGET_BUILD_GRAPHENEOS_CAMERA)),true)
+PRODUCT_PACKAGES += \
+    GrapheneOS-Camera
+endif
+
 # RRO Overlays
 PRODUCT_PACKAGES += \
     NavigationBarModeGesturalOverlayFS
