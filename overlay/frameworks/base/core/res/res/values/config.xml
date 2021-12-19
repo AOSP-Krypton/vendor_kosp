@@ -121,4 +121,7 @@
          should be cut out to display config_signalAttributionPath. -->
     <item name="config_signalCutoutWidthFraction" format="float" type="dimen">11</item>
     <item name="config_signalCutoutHeightFraction" format="float" type="dimen">11</item>
+
+    <!-- Suppress System UI ANRs -->
+    <string translatable="false" name="config_appsNotReportingCrashes">com.android.systemui</string>
 </resources>
