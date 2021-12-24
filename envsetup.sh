@@ -74,6 +74,7 @@ Krypton specific functions:
               -c to do an install-clean.
               -j to generate ota json for the device.
               -f to generate fastboot zip
+              -b to generate boot.img
               Example: 'launch 1 user -wg' , or 'launch guacamole user -wg'
                     Both will do a clean user build with gapps for device guacamole (codenum 1)
 - devices:    Usage: devices -p
@@ -175,6 +176,7 @@ function launch() {
   local installclean=false
   local json=false
   local fastbootZip=false
+  local bootImage=false
 
   # Check for official devices
   chk_device $1; shift # Remove device name from options
@@ -184,13 +186,14 @@ function launch() {
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
   GAPPS_BUILD=false # Reset it here everytime
-  while getopts ":gwcjf" option; do
+  while getopts ":gwcjfb" option; do
     case $option in
       g) GAPPS_BUILD=true;;
       w) wipe=true;;
       c) installclean=true;;
       j) json=true;;
       f) fastbootZip=true;;
+      b) bootImage=true;;
      \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
     esac
   done
@@ -239,6 +242,13 @@ function launch() {
   if [ $STATUS -eq 0 ] ; then
     if $fastbootZip ; then
       gen_fastboot_zip
+      STATUS=$?
+    fi
+  fi
+
+  if [ $STATUS -eq 0 ] ; then
+    if $bootImage ; then
+      gen_boot_image
       STATUS=$?
     fi
   fi
@@ -330,6 +340,16 @@ function gen_fastboot_zip() {
   local ret=$?
   echo -e "${INFO}: fastboot-zip  : $rel_path${NC}"
   return $ret
+}
+
+function gen_boot_image() {
+  croot
+  local boot_img="$OUT/obj/PACKAGING/target_files_intermediates/krypton_*/IMAGES/boot.img"
+  local timestamp=$(date +%Y_%d_%m)
+  local dest_boot_img="$OUT/boot_$timestamp.img"
+  cp $boot_img $dest_boot_img
+  local rel_path=$(realpath --relative-to="$PWD" $dest_boot_img)
+  echo -e "${INFO}: boot-image  : $rel_path${NC}"
 }
 
 function search() {
