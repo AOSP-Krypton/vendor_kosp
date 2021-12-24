@@ -75,6 +75,7 @@ Krypton specific functions:
               -j to generate ota json for the device.
               -f to generate fastboot zip
               -b to generate boot.img
+              -s to sideload built zip file
               Example: 'launch 1 user -wg' , or 'launch guacamole user -wg'
                     Both will do a clean user build with gapps for device guacamole (codenum 1)
 - devices:    Usage: devices -p
@@ -98,6 +99,9 @@ Krypton specific functions:
               -t for aosp tag to merge
               -p to push to github for all repos
               Example: merge_aosp -t android-12.0.0_r2 -p
+- sideload:   Sideload a zip while device is booted. It will boot to recovery, sideload the file and boot you back to system
+              Usage: sideload filename
+
 EOF
 }
 
@@ -177,6 +181,7 @@ function launch() {
   local json=false
   local fastbootZip=false
   local bootImage=false
+  local sideloadZip=false
 
   # Check for official devices
   chk_device $1; shift # Remove device name from options
@@ -186,7 +191,7 @@ function launch() {
   [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
   variant=$1; shift # Remove build variant from options
   GAPPS_BUILD=false # Reset it here everytime
-  while getopts ":gwcjfb" option; do
+  while getopts ":gwcjfbs" option; do
     case $option in
       g) GAPPS_BUILD=true;;
       w) wipe=true;;
@@ -194,6 +199,7 @@ function launch() {
       j) json=true;;
       f) fastbootZip=true;;
       b) bootImage=true;;
+      s) sideloadZip=true;;
      \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
     esac
   done
@@ -255,6 +261,13 @@ function launch() {
 
   endTime=$(date "+%s")
   echo -e "${INFO}: build finished in $(timer $timeStart $endTime)${NC}"
+
+  if [ $STATUS -eq 0 ] ; then
+    if $sideloadZip ; then
+      sideload $FILE
+      STATUS=$?
+    fi
+  fi
 
   return $STATUS
 }
@@ -450,4 +463,8 @@ function merge_aosp() {
   else
     echo -e "${ERROR}: unable to find $manifest file${NC}" && return 1
   fi
+}
+
+function sideload() {
+  adb wait-for-device reboot sideload-auto-reboot && adb wait-for-device-sideload && adb sideload $1
 }
