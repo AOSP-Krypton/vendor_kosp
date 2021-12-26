@@ -18,7 +18,7 @@ TEMP_TOP := $(shell pwd)
 ifeq ($(TARGET_PREBUILT_KERNEL),)
 ifeq ($(TARGET_KERNEL_SOURCE),)
 $(error "Kernel source is not defined")
-else ifeq ($(TARGET_KERNEL_DEFCONFIG),)
+else ifeq ($(TARGET_KERNEL_CONFIG),)
 $(error "Kernel defconfig is not defined")
 endif
 
@@ -26,7 +26,7 @@ endif
 PREBUILTS_COMMON := $(TEMP_TOP)/prebuilts
 
 # AndroidKernel.mk needs KERNEL_DEFCONFIG
-KERNEL_DEFCONFIG := $(strip $(TARGET_KERNEL_DEFCONFIG))
+KERNEL_DEFCONFIG := $(strip $(TARGET_KERNEL_CONFIG))
 
 # Set this for caf hals
 TARGET_COMPILE_WITH_MSM_KERNEL := true
@@ -45,8 +45,8 @@ TARGET_KERNEL_CROSS_COMPILE_ARM32_PREFIX := $(strip $(TARGET_KERNEL_CROSS_COMPIL
 KERNEL_LLVM_SUPPORT := true
 KRYPTON_TOOLS := $(PREBUILTS_COMMON)/krypton-tools
 
-ifneq ($(strip $(CLANG_CUSTOM_TOOLCHAIN)),)
-CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/$(HOST_PREBUILT_TAG)/$(strip $(CLANG_CUSTOM_TOOLCHAIN))/bin
+ifneq ($(strip $(TARGET_KERNEL_CLANG_VERSION)),)
+CLANG_TOOLCHAIN := $(PREBUILTS_COMMON)/clang/host/$(HOST_PREBUILT_TAG)/$(strip $(TARGET_KERNEL_CLANG_VERSION))/bin
 ifeq (,$(wildcard $(CLANG_TOOLCHAIN)/clang))
 $(error "Unable to find clang binary in $(CLANG_TOOLCHAIN)")
 endif
