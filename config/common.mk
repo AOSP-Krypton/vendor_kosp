@@ -173,3 +173,5 @@ PRODUCT_PACKAGES += \
 # Themes
 $(call inherit-product, vendor/themes/common.mk)
 
+# Sepolicy
+$(call inherit-product, vendor/krypton/config/sepolicy.mk)
