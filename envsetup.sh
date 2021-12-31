@@ -28,46 +28,16 @@ ERROR="${LR}Error"
 INFO="${LG}Info"
 WARN="${LP}Warning"
 
-# Add all officialy supported devices to an array
-krypton_products=()
-device=
-
-buildDate=
-
 # Set to non gapps build by default
 GAPPS_BUILD=false
 export GAPPS_BUILD
-
-function devices() {
-  local tmp="0"
-  local LIST="${ANDROID_BUILD_TOP}/vendor/krypton/products/products.list"
-  local print=false
-  krypton_products=()
-  # Check whether to print list of devices
-  [ ! -z $1 ] && [ $1 == "-p" ] && print=true && echo -e "${LG}List of officially supported devices and corresponding codes:${NC}"
-
-  while read -r product; do
-    if [ ! -z $product ] ; then
-      tmp=$(expr $tmp + 1)
-      krypton_products+=("$product:$tmp")
-      if $print ; then
-        echo -ne "${LP}$tmp:${NC} ${LG}$product${NC}\t"
-        local pos=$(expr $tmp % 3)
-        [ $pos -eq 0 ] && echo -ne "\n"
-      fi
-    fi
-  done < $LIST
-  $print && echo ""
-}
-devices
-official=false # Default to unofficial status
 
 function krypton_help() {
 cat <<EOF
 Krypton specific functions:
 - cleanup:    Clean \$OUT directory, as well as intermediate zips if any.
 - launch:     Build a full ota.
-              Usage: launch <device | codenum> <variant> [-g] [-w] [-c] [-f]
+              Usage: launch <device> <variant> [-g] [-w] [-c] [-f]
               codenum for your device can be obtained by running: devices -p
               -g to build gapps variant.
               -w to wipe out directory.
@@ -76,12 +46,8 @@ Krypton specific functions:
               -f to generate fastboot zip
               -b to generate boot.img
               -s to sideload built zip file
-              Example: 'launch 1 user -wg' , or 'launch guacamole user -wg'
-                    Both will do a clean user build with gapps for device guacamole (codenum 1)
-- devices:    Usage: devices -p
-              Prints all officially supported devices with their code numbers.
-- chk_device: Usage: chk_device <device>
-              Prints whether or not device is officially supported by KOSP
+              Example: 'launch guacamole user -wg'
+                    Both will do a clean user build with gapps for device guacamole
 - gen_info:   Print ota info like md5, size.
               Usage: gen_info [-j]
               -j to generate json
@@ -89,7 +55,7 @@ Krypton specific functions:
               Usage: search <string>
 - reposync:   Sync repo with the following default params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.
               Pass in additional options alongside if any.
-- fetchrepos: Set up local_manifest for device and fetch the repos set in vendor/krypton/products/device.deps
+- fetchrepos: Set up local_manifest for device and fetch the repos set in device/<vendor>/<codename>/krypton.dependencies
               Usage: fetchrepos <device>
 - keygen:     Generate keys for signing builds.
               Usage: keygen <dir>
@@ -117,63 +83,18 @@ function timer() {
 function cleanup() {
   croot
   make clean
-  rm -rf K*.zip s*.zip
   return $?
 }
 
-function fetchrepos() {
-  local deps="${ANDROID_BUILD_TOP}/vendor/krypton/products/${1}.deps"
-  local list=() # Array for holding the projects
-  local repos=() # Array for storing the values for the <project> tag
-  local dir="${ANDROID_BUILD_TOP}/.repo/local_manifests" # Local manifest directory
-  local manifest="${dir}/${1}.xml" # Local manifest
-  [ -z $1 ] && echo -e "${ERROR}: device name cannot be empty.Usage: fetchrepos <device>${NC}" && return 1
-  [ ! -f $deps ] && echo -e "${ERROR}: deps file $deps not found" && return 1 # Return if deps file is not found
-  echo -e "${INFO}: Setting up manifest for ${1}${NC}"
-
-  [ ! -d $dir ] && mkdir -p $dir
-  echo -e "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<manifest>" > $manifest
-
-  # Grab all the projects
-  while read -r project; do
-    [[ ! $project =~ ^#.* ]] && list+=("$project")
-  done < $deps
-
-  for ((i=0; i<${#list[@]}; i++)); do
-    local project=()
-    for val in ${list[i]}; do
-      project+=($val)
-    done
-    echo -e "\t<project ${project[@]} />" >> $manifest
-  done
-  echo "</manifest>" >> $manifest # Manifest has been written
-  echo -e "${INFO}: Fetching repos....${NC}"
-  reposync # Sync the repos
-}
-
-function chk_device() {
-  device=""
-  official=false
-  for entry in ${krypton_products[@]}; do
-    local product=${entry%:*}
-    local product_num=${entry#*:}
-    if [ "$1" == "$product_num" ] || [ "$1" == "$product" ] ; then
-      device="$product"
-      official=true
-      break
-    fi
-  done
-  [ -z "$device" ] && device="$1"
-  # Show official or unofficial status
-  if $official ; then
-    echo -e "${INFO}: device $device is officially supported by KOSP${NC}"
-  else
-    echo -e "${WARN}: device $device is not officially supported by KOSP${NC}"
+function fetch_repos() {
+  if ! command -v python3 &> /dev/null; then
+    echo -e "${ERROR}: Python3 is not installed${NC}"
+    return 1
   fi
+  $(which python3) vendor/krypton/build/tools/roomservice.py $1
 }
 
 function launch() {
-  buildDate=$(date "+%Y%m%d")
   OPTIND=1
   local variant=""
   local wipe=false
@@ -183,8 +104,7 @@ function launch() {
   local bootImage=false
   local sideloadZip=false
 
-  # Check for official devices
-  chk_device $1; shift # Remove device name from options
+  local device=$1; shift # Remove device name from options
 
   # Check for build variant
   check_variant $1
