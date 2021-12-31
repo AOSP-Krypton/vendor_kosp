@@ -28,7 +28,7 @@ import (
 )
 
 func init() {
-	android.RegisterModuleType("yaap_generator", GeneratorFactory)
+	android.RegisterModuleType("krypton_generator", GeneratorFactory)
 }
 
 var String = proptools.String
@@ -210,12 +210,12 @@ func (g *Module) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	if depRoot == "" {
 		depRoot = ctx.ModuleDir()
 	} else {
-		depRoot = yaapExpandVariables(ctx, depRoot)
+		depRoot = kryptonExpandVariables(ctx, depRoot)
 	}
 
 	// Glob dep_files property
 	for _, dep_file := range g.properties.Dep_files {
-		dep_file = yaapExpandVariables(ctx, dep_file)
+		dep_file = kryptonExpandVariables(ctx, dep_file)
 		globPath := filepath.Join(depRoot, dep_file)
 		paths, err := ctx.GlobWithDeps(globPath, nil)
 		if err != nil {
@@ -227,7 +227,7 @@ func (g *Module) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 		}
 	}
 
-	cmd := yaapExpandVariables(ctx, String(g.properties.Cmd))
+	cmd := kryptonExpandVariables(ctx, String(g.properties.Cmd))
 
 	rawCommand, err := android.Expand(cmd, func(name string) (string, error) {
 		switch name {

@@ -1,4 +1,4 @@
-# Copyright (C) 2020 YAAP
+# Copyright 2021 AOSP-Krypton Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Versioning System
-BUILD_DATE := $(shell date +%Y%m%d)
-TARGET_PRODUCT_SHORT := $(subst yaap_,,$(YAAP_BUILD))
+# Version and fingerprint
+KRYPTON_VERSION_MAJOR := 2
+KRYPTON_VERSION_MINOR := 2
+KRYPTON_VERSION := $(KRYPTON_VERSION_MAJOR).$(KRYPTON_VERSION_MINOR)
 
-YAAP_BUILDTYPE ?= HOMEMADE
-YAAP_BUILD_VERSION := $(PLATFORM_VERSION)
-YAAP_VERSION := $(YAAP_BUILD_VERSION)-$(YAAP_BUILDTYPE)-$(TARGET_PRODUCT_SHORT)-$(BUILD_DATE)
-ROM_FINGERPRINT := YAAP/$(PLATFORM_VERSION)/$(TARGET_PRODUCT_SHORT)/$(shell date -u +%H%M)
-
+# Set props
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
-  ro.yaap.build.version=$(YAAP_BUILD_VERSION) \
-  ro.yaap.build.date=$(BUILD_DATE) \
-  ro.yaap.buildtype=$(YAAP_BUILDTYPE) \
-  ro.yaap.fingerprint=$(ROM_FINGERPRINT) \
-  ro.yaap.version=$(YAAP_VERSION) \
-  ro.yaap.device=$(YAAP_BUILD) \
-  ro.modversion=$(YAAP_VERSION)
+  ro.krypton.build.device=$(KRYPTON_BUILD) \
+  ro.krypton.build.version=$(KRYPTON_VERSION)
+
+KOSP_OTA_PACKAGE_NAME := KOSP-$(KRYPTON_VERSION)-$(KRYPTON_BUILD)-$(TARGET_BUILD_VARIANT)
+
+ifeq ($(strip $(OFFICIAL_BUILD)),true)
+KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-OFFICIAL
+else
+KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-UNOFFICIAL
+endif
+
+ifeq ($(strip $(GAPPS_BUILD)),true)
+KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-GAPPS
+else
+KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-VANILLA
+endif
+
+KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME).zip
