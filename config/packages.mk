@@ -13,3 +13,7 @@ PRODUCT_PACKAGES += \
 # OTA Updater
 PRODUCT_PACKAGES += \
     KOSP-Updater
+
+# GamingMode
+PRODUCT_PACKAGES += \
+    GamingMode
