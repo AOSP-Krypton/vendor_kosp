@@ -107,8 +107,8 @@ else
 endif
 
 # Needed for CONFIG_COMPAT_VDSO, safe to set for all arm64 builds
-ifneq ($(TARGET_KERNEL_CLANG_COMPILE),true)
-   ifeq ($(KERNEL_TOOLCHAIN_ARM32_PREFIX),)
+ifeq ($(TARGET_KERNEL_CLANG_COMPILE),true)
+   ifneq ($(KERNEL_TOOLCHAIN_ARM32_PREFIX),)
        KERNEL_CROSS_COMPILE += CROSS_COMPILE_ARM32="$(KERNEL_TOOLCHAIN_ARM32_PREFIX)"
    endif
 else ifeq ($(KERNEL_ARCH),arm64)
