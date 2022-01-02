@@ -86,7 +86,7 @@ function cleanup() {
   return $?
 }
 
-function fetch_repos() {
+function fetchrepos() {
   if ! command -v python3 &> /dev/null; then
     echo -e "${ERROR}: Python3 is not installed${NC}"
     return 1
