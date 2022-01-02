@@ -209,10 +209,6 @@ ifneq ($(TARGET_KERNEL_MODULES),)
     $(error TARGET_KERNEL_MODULES is no longer supported!)
 endif
 
-# Set the full path to the clang command
-KERNEL_MAKE_FLAGS += HOSTCC=$(TARGET_KERNEL_CLANG_PATH)/bin/clang
-KERNEL_MAKE_FLAGS += HOSTCXX=$(TARGET_KERNEL_CLANG_PATH)/bin/clang++
-
 PATH_OVERRIDE += PATH=$(KERNEL_TOOLCHAIN_PATH_gcc)/bin:$$PATH
 
 # System tools are no longer allowed on 10+
