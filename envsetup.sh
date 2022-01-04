@@ -329,7 +329,7 @@ function merge_aosp() {
 
   local platformUrl="https://android.googlesource.com/platform/"
   local url=
-  local excludeList="krypton|kosp|lineage|vendor|clang|Matlog|GrapheneOS-Camera|PreferenceExtensions"
+  local excludeList="krypton|kosp|lineage|vendor|clang|Matlog|GrapheneOS-Camera|PreferenceExtensions|Gaming"
 
   croot
   [ -z $tag ] && echo -e "${ERROR}: aosp tag cannot be empty${NC}" && return 1
