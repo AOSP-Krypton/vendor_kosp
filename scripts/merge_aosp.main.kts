@@ -112,13 +112,16 @@ fun parseSavedState() {
         Log.warn("Saved state file is missing, merge will start fresh")
         return
     }
-    FileInputStream(savedStateFile).bufferedReader().use {
-        var stateLine = it.readLine()
-        while (stateLine?.isNotBlank() == true) {
-            val path = stateLine.substringBefore(";")
-            savedStateMap[path] = parseStateFromString(stateLine)
-            stateLine = it.readLine()
+    try {
+        FileInputStream(savedStateFile).bufferedReader().use {
+            it.readText()
+        }.split("\n").forEach {
+            val path = it.substringBefore(";")
+            savedStateMap[path] = parseStateFromString(it)
         }
+    } catch (e: IOException) {
+        Log.error("Failed to read saved state file!")
+        exitProcess(0)
     }
 }
 
@@ -272,15 +275,11 @@ fun saveStateMapToFile() {
  */
 fun getExcludeList(): List<String> {
     if (!excludeFile.isFile) return emptyList()
-    val list = mutableListOf<String>()
+    val list: List<String>
     try {
-        FileInputStream(excludeFile).bufferedReader().use {
-            var project = it.readLine()
-            while (project?.isNotBlank() == true) {
-                list.add(project)
-                project = it.readLine()
-            }
-        }
+        list = FileInputStream(excludeFile).bufferedReader().use {
+            it.readText()
+        }.split("\n").filter { it.isNotBlank() }
     } catch (e: IOException) {
         Log.fatal("IOException while parsing exclude list, ${e.message}")
         exitProcess(1)
@@ -368,21 +367,14 @@ fun bumpVersion() {
         exitProcess(1)
     }
 
-    var fileString = ""
-    var majorVersionString = ""
-    var minorVersionString = ""
+    // Parse file and props
+    var fileString: String
+    val majorVersionString: String
+    val minorVersionString: String
     try {
-        FileInputStream(propFile).bufferedReader().use {
-            var line = it.readLine()
-            while (line != null) {
-                fileString += "$line\n"
-                if (line.contains(Constants.MAJOR_VERSION_STRING_PATTERN))
-                    majorVersionString = line
-                else if (line.contains(Constants.MINOR_VERSION_STRING_PATTERN))
-                    minorVersionString = line
-                line = it.readLine()
-            }
-        }
+        fileString = FileInputStream(propFile).bufferedReader().use { it.readText() }
+        majorVersionString = fileString.split("\n").first { it.contains(Constants.MAJOR_VERSION_STRING_PATTERN) }
+        minorVersionString = fileString.split("\n").first { it.contains(Constants.MINOR_VERSION_STRING_PATTERN) }
     } catch (e: IOException) {
         Log.fatal("Failed to fully read ${Constants.PROP_FILE}, ${e.message}")
         exitProcess(1)
@@ -398,17 +390,18 @@ fun bumpVersion() {
     val newVersionString = "${Constants.MINOR_VERSION_STRING_PATTERN} $newMinorVersion"
     // Replace prop
     fileString = fileString.replace(minorVersionString, newVersionString)
-
+    // Write to file
     Log.info("Bumping version from $majorVersion.$currentMinorVersion to $majorVersion.$newMinorVersion")
     try {
-        FileOutputStream(propFile).use {
-            it.write(fileString.toByteArray())
+        FileOutputStream(propFile).bufferedWriter().use {
+            it.write(fileString)
             it.flush()
         }
     } catch (e: IOException) {
         Log.fatal("Failed to rewrite ${Constants.PROP_FILE}, ${e.message}")
         exitProcess(1)
     }
+    // Commit changes
     val propFileRelativePath = Constants.PROP_FILE.substringAfter("${Constants.VENDOR_PATH}/")
     run("git add $propFileRelativePath", Constants.VENDOR_PATH)
     run(
