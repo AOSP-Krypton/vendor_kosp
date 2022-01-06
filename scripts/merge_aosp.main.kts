@@ -123,7 +123,7 @@ fun parseSavedState() {
 }
 
 /**
- * Unflattens a [SavedState] object flattened with
+ * Un-flattens a [SavedState] object flattened with
  * it's [SavedState.toString] function
  */
 fun parseStateFromString(line: String): SavedState {
@@ -183,14 +183,14 @@ fun merge() {
     Log.info("Kicking off merge with tag $tag")
     // Merge in all repositories
     val cores = Runtime.getRuntime().availableProcessors()
-    var projectList = getProjectList(getExcludeList()).filter {
-        run("git -C $it rev-parse").exitCode == 0
+    var projectMap = getProjectMap(getExcludeList()).filter {
+        run("git -C ${it.key} rev-parse").exitCode == 0
     }
     if (continueMerge) {
-        projectList = projectList.filter { savedStateMap[it]?.shouldSkip() != true }
+        projectMap = projectMap.filterNot { savedStateMap[it.key]?.shouldSkip() == true }
     }
     runBlocking(Dispatchers.Default) {
-        projectList.chunked(cores).forEach {
+        projectMap.entries.chunked(cores).forEach {
             launch {
                 mergeInternal(it)
             }
@@ -199,11 +199,11 @@ fun merge() {
     if (savedStateMap.isNotEmpty()) saveStateMapToFile()
     // Merge in manifest
     fetchAndMerge(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
-    if (push) pushToGit(ManifestAttrs.MANIFEST_REPO_PATH)
+    if (push) pushToGit(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
     // Bump version and push if specified
     if (bump) {
         bumpVersion()
-        if (push) pushToGit(Constants.VENDOR_PATH)
+        if (push) pushToGit(Constants.VENDOR_PATH, Constants.VENDOR_REPO)
     }
 }
 
@@ -212,24 +212,24 @@ fun merge() {
  *
  * @param projects the list of subprojects
  */
-suspend fun mergeInternal(projects: List<String>) {
+suspend fun mergeInternal(projects: List<Map.Entry<String, String>>) {
     projects.forEach {
         // Check if we should merge
-        if (savedStateMap[it]?.merged != true) {
+        if (savedStateMap[it.key]?.merged != true) {
             // build/make repo is platform/build in aosp, so we need to pass in separate
             // path and repo name
-            val success = if (it == ManifestAttrs.BUILD_REPO_PATH) {
-                fetchAndMerge(it, ManifestAttrs.BUILD_REPO_NAME)
+            val success = if (it.key == ManifestAttrs.BUILD_REPO_PATH) {
+                fetchAndMerge(it.key, ManifestAttrs.BUILD_REPO_NAME)
             } else {
-                fetchAndMerge(it)
+                fetchAndMerge(it.key)
             }
-            if (success) updateStateLocked(it, merged = true, pushed = false)
+            if (success) updateStateLocked(it.key, merged = true, pushed = false)
         }
         // There is no need to check for saved state here since repos
         // that have already been merged and pushed are filtered out of
         // project list in the beginning
-        if (push && pushToGit(it)) {
-            updateStateLocked(it, merged = true, pushed = true)
+        if (push && pushToGit(it.key, it.value)) {
+            updateStateLocked(it.key, merged = true, pushed = true)
         }
     }
 }
@@ -289,12 +289,12 @@ fun getExcludeList(): List<String> {
 }
 
 /**
- * Returns the list of projects parsed from [manifest].
+ * Returns a map of project path to it's name, parsed from [manifest].
  *
  * @param exclude [List] of project paths to exclude from the parsed list.
  */
-fun getProjectList(exclude: List<String>): List<String> {
-    val list = mutableListOf<String>()
+fun getProjectMap(exclude: List<String>): Map<String, String> {
+    val map = mutableMapOf<String, String>()
     try {
         val factory = DocumentBuilderFactory.newInstance()
         val docBuilder = factory.newDocumentBuilder()
@@ -303,10 +303,13 @@ fun getProjectList(exclude: List<String>): List<String> {
         for (i in 0 until projectNodeList.length) {
             val node: Node = projectNodeList.item(i)
             if (node.nodeType != Node.ELEMENT_NODE) continue
-            val path = (node as Element).getAttribute(ManifestAttrs.PATH)
-            if (!exclude.contains(path)) list.add(path)
+            val element = (node as Element)
+            val path = element.getAttribute(ManifestAttrs.PATH)
+            if (!exclude.contains(path)) {
+                map[path] = element.getAttribute(ManifestAttrs.NAME)
+            }
         }
-        return list
+        return map
     } catch (e: Exception) {
         Log.fatal(e.message)
         exitProcess(1)
@@ -337,14 +340,15 @@ fun fetchAndMerge(path: String, name: String = path): Boolean {
 }
 
 /**
- * Push current HEAD to [Constants.KRYPTON_REMOTE] in branch [Constants.KRYPTON_BRANCH]
+ * Push current HEAD to remote repository
  *
  * @param path path of git repo to push
+ * @param name name of the git repo as given in the organization
  */
-fun pushToGit(path: String): Boolean {
+fun pushToGit(path: String, name: String): Boolean {
     val pushOut = run(
-        "git push ${Constants.KRYPTON_REMOTE}" +
-                " HEAD:${Constants.KRYPTON_BRANCH}", path
+        "git push ${Constants.REMOTE_BASE_URL}/$name" +
+                " HEAD:${Constants.REMOTE_BRANCH}", path
     )
     if (pushOut.exitCode != 0) {
         Log.error("Failed to push $path, reason: ${pushOut.error}")
@@ -474,6 +478,7 @@ object ManifestAttrs {
     const val PLATFORM_URL = "https://android.googlesource.com/platform"
     const val PROJECT = "project"
     const val PATH = "path"
+    const val NAME = "name"
 
     const val BUILD_REPO_NAME = "build"
     const val BUILD_REPO_PATH = "build/make"
@@ -485,10 +490,11 @@ object ManifestAttrs {
 object Constants {
     val PROC_TIMEOUT = TimeUnit.MINUTES.toMillis(10)
 
-    const val KRYPTON_REMOTE = "krypton-ssh"
-    const val KRYPTON_BRANCH = "A12"
+    const val REMOTE_BASE_URL = "git@github.com:AOSP-Krypton"
+    const val REMOTE_BRANCH = "A12"
 
     const val VENDOR_PATH = "vendor/krypton"
+    const val VENDOR_REPO = "vendor_krypton"
 
     const val PROP_FILE = "$VENDOR_PATH/config/version.mk"
     const val MAJOR_VERSION_STRING_PATTERN = "KRYPTON_VERSION_MAJOR :="
