@@ -51,6 +51,11 @@ private var continueMerge = false
 parseOptions()
 if (continueMerge) parseSavedState()
 merge()
+// Bump version and push if specified
+if (bump) {
+    bumpVersion()
+    if (push) pushToGit(Constants.VENDOR_PATH, Constants.VENDOR_REPO)
+}
 
 /**
  * Prints help message for krypton_help function from envsetup
@@ -203,11 +208,6 @@ fun merge() {
     // Merge in manifest
     fetchAndMerge(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
     if (push) pushToGit(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
-    // Bump version and push if specified
-    if (bump) {
-        bumpVersion()
-        if (push) pushToGit(Constants.VENDOR_PATH, Constants.VENDOR_REPO)
-    }
 }
 
 /**
@@ -369,25 +369,23 @@ fun bumpVersion() {
 
     // Parse file and props
     var fileString: String
-    val majorVersionString: String
-    val minorVersionString: String
     try {
         fileString = FileInputStream(propFile).bufferedReader().use { it.readText() }
-        majorVersionString = fileString.split("\n").first { it.contains(Constants.MAJOR_VERSION_STRING_PATTERN) }
-        minorVersionString = fileString.split("\n").first { it.contains(Constants.MINOR_VERSION_STRING_PATTERN) }
     } catch (e: IOException) {
         Log.fatal("Failed to fully read ${Constants.PROP_FILE}, ${e.message}")
         exitProcess(1)
     }
-    if (minorVersionString.isBlank() || majorVersionString.isBlank()) {
+    val majorVersionString = Constants.MAJOR_VERSION_STRING_PATTERN.find(fileString)?.value
+    val minorVersionString = Constants.MINOR_VERSION_STRING_PATTERN.find(fileString)?.value
+    if (minorVersionString == null || majorVersionString == null) {
         Log.fatal("Unable to get current version")
         exitProcess(1)
     }
 
-    val majorVersion = majorVersionString.substringAfter(":= ").toInt()
+    val majorVersion = majorVersionString.substringAfter(":= ")
     val currentMinorVersion = minorVersionString.substringAfter(":= ").toInt()
     val newMinorVersion = currentMinorVersion + 1
-    val newVersionString = "${Constants.MINOR_VERSION_STRING_PATTERN} $newMinorVersion"
+    val newVersionString = minorVersionString.replace(currentMinorVersion.toString(), newMinorVersion.toString())
     // Replace prop
     fileString = fileString.replace(minorVersionString, newVersionString)
     // Write to file
@@ -490,8 +488,8 @@ object Constants {
     const val VENDOR_REPO = "vendor_krypton"
 
     const val PROP_FILE = "$VENDOR_PATH/config/version.mk"
-    const val MAJOR_VERSION_STRING_PATTERN = "KRYPTON_VERSION_MAJOR :="
-    const val MINOR_VERSION_STRING_PATTERN = "KRYPTON_VERSION_MINOR :="
+    val MAJOR_VERSION_STRING_PATTERN = Regex("KRYPTON_VERSION_MAJOR := \\d+")
+    val MINOR_VERSION_STRING_PATTERN = Regex("KRYPTON_VERSION_MINOR := \\d+")
 
     const val MERGE_EXCLUDE_FILE = "$VENDOR_PATH/scripts/aosp_merge_exclude.txt"
     const val SAVED_STATE_FILE = "$VENDOR_PATH/scripts/saved_state.txt"
