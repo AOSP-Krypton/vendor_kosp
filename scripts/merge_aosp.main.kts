@@ -7,12 +7,12 @@
 
 @file:Repository("https://repo.maven.apache.org/maven2/")
 @file:DependsOn("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2")
+@file:Import("util.main.kts")
 
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -81,30 +81,10 @@ fun parseOptions() {
         help()
         exitProcess(0)
     }
-    // Parse tag
-    if (!args.contains(Args.TAG)) {
-        Log.fatal("tag [ ${Args.TAG} option ] is not specified!")
-        exitProcess(1)
-    }
-    tag = getArgValue(Args.TAG)
+    tag = Utils.getArgValue(Args.TAG, args)
     push = args.contains(Args.PUSH)
     bump = args.contains(Args.BUMP)
     continueMerge = args.contains(Args.CONTINUE)
-}
-
-/**
- * Attempts to get a value for an arg by getting the
- * value at next index in [args]. Exits if unable to get
- * argument. Call this function only if a value is supposed
- * to be passed along with the arg.
- */
-fun getArgValue(arg: String): String {
-    val index = args.indexOf(arg)
-    if (args.size == (index + 1)) {
-        Log.fatal("argument $arg does not have any supplied value")
-        exitProcess(1)
-    }
-    return args[index + 1]
 }
 
 /**
@@ -143,44 +123,6 @@ fun parseStateFromString(line: String): SavedState {
 }
 
 /**
- * An overloaded version of the function below where @param cmd is a single command to run
- * which will be split into a list based on \\s (whitespace).
- */
-fun run(cmd: String, dir: String? = null, timeout: Long = Constants.PROC_TIMEOUT): Output {
-    return run(cmd.split("\\s".toRegex()), dir, timeout)
-}
-
-/**
- * Wrapper function to run a shell command
- *
- * @param commands the list of commands to pass to the [ProcessBuilder] constructor
- * @param dir the working directory in which this command should be run
- * @param timeout time in millis to wait until the process should be killed.
- *                Defaults to 10 minutes.
- *
- * @return an [Output] which contains the exit status of the command and output / error message as well
- */
-fun run(commands: List<String>, dir: String? = null, timeout: Long = Constants.PROC_TIMEOUT): Output {
-    try {
-        val process = ProcessBuilder(commands)
-            .redirectOutput(ProcessBuilder.Redirect.PIPE)
-            .redirectError(ProcessBuilder.Redirect.PIPE).also {
-                if (dir != null) it.directory(File(dir))
-            }.start().also {
-                it.waitFor(timeout, TimeUnit.MILLISECONDS)
-            }
-        return Output(
-            process.exitValue(),
-            process.inputStream.bufferedReader().use { it.readText() },
-            process.errorStream.bufferedReader().use { it.readText() },
-        )
-    } catch (e: IOException) {
-        Log.fatal("${e.message}")
-        exitProcess(1)
-    }
-}
-
-/**
  * Fetches project list parsed from [manifest], excluding the
  * one's returned from [getExcludeList], and then sequentially
  * fetches and merges AOSP tag.
@@ -192,7 +134,7 @@ fun merge() {
     // Merge in all repositories
     val cores = Runtime.getRuntime().availableProcessors()
     var projectMap = getProjectMap(getExcludeList()).filter {
-        run("git -C ${it.key} rev-parse").exitCode == 0
+        ShellUtils.run("git -C ${it.key} rev-parse").exitCode == 0
     }
     if (continueMerge) {
         projectMap = projectMap.filterNot { savedStateMap[it.key]?.shouldSkip() == true }
@@ -324,12 +266,12 @@ fun getProjectMap(exclude: List<String>): Map<String, String> {
  */
 fun fetchAndMerge(path: String, name: String = path): Boolean {
     val url = "${ManifestAttrs.PLATFORM_URL}/$name"
-    val fetchOut = run("git fetch $url $tag", path)
+    val fetchOut = ShellUtils.run("git fetch $url $tag", path)
     if (fetchOut.exitCode != 0) {
         Log.error("Fetching tag for $path failed, reason: ${fetchOut.error}")
         return false
     }
-    val mergeOut = run("git merge FETCH_HEAD", path)
+    val mergeOut = ShellUtils.run("git merge FETCH_HEAD", path)
     if (mergeOut.exitCode != 0) {
         Log.error("Merge failed for $path, reason: ${mergeOut.error}")
         return false
@@ -345,7 +287,7 @@ fun fetchAndMerge(path: String, name: String = path): Boolean {
  * @param name name of the git repo as given in the organization
  */
 fun pushToGit(path: String, name: String): Boolean {
-    val pushOut = run(
+    val pushOut = ShellUtils.run(
         "git push ${Constants.REMOTE_BASE_URL}/$name" +
                 " HEAD:${Constants.REMOTE_BRANCH}", path
     )
@@ -401,8 +343,8 @@ fun bumpVersion() {
     }
     // Commit changes
     val propFileRelativePath = Constants.PROP_FILE.substringAfter("${Constants.VENDOR_PATH}/")
-    run("git add $propFileRelativePath", Constants.VENDOR_PATH)
-    run(
+    ShellUtils.run("git add $propFileRelativePath", Constants.VENDOR_PATH)
+    ShellUtils.run(
         listOf("git", "commit", "-m", "krypton: bump version to $majorVersion.$newMinorVersion"),
         Constants.VENDOR_PATH
     )
@@ -422,36 +364,6 @@ class SavedState(
     fun shouldSkip() = merged && pushed
 
     override fun toString(): String = "merged=$merged;pushed=$pushed"
-}
-
-/**
- * A data class representing the output of a process
- */
-data class Output(
-    val exitCode: Int,
-    val output: String?,
-    val error: String?
-)
-
-/**
- * Utility object for logging messages to console
- */
-object Log {
-    fun info(msg: String?) {
-        println("Info: $msg")
-    }
-
-    fun warn(msg: String?) {
-        println("Warning: $msg")
-    }
-
-    fun error(msg: String?) {
-        println("Error: $msg")
-    }
-
-    fun fatal(msg: String?) {
-        println("Fatal error: $msg")
-    }
 }
 
 /**
@@ -479,8 +391,6 @@ object ManifestAttrs {
 }
 
 object Constants {
-    val PROC_TIMEOUT = TimeUnit.MINUTES.toMillis(10)
-
     const val REMOTE_BASE_URL = "git@github.com:AOSP-Krypton"
     const val REMOTE_BRANCH = "A12"
 
