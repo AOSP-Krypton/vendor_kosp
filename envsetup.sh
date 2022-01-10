@@ -274,7 +274,7 @@ function search() {
 
 function reposync() {
     local SYNC_ARGS="--optimized-fetch --no-clone-bundle --no-tags --current-branch"
-    repo sync -j"$(nproc --all)" "$SYNC_ARGS" "$@"
+    repo sync -j"$(nproc --all)" $SYNC_ARGS "$@"
     return $?
 }
 
