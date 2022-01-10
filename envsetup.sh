@@ -34,7 +34,7 @@ function krypton_help() {
     cat <<EOF
 Krypton specific functions:
 - launch:     Build a full ota package.
-              Usage: launch <device> <variant> [-g] [-w] [-c] [-f]
+              Usage: launch <device> <variant> [-g] [-w] [-c] [-f] [-o]
                       -g to build gapps variant.
                       -w to wipe out directory.
                       -c to do an install-clean.
@@ -42,7 +42,7 @@ Krypton specific functions:
                       -f to generate fastboot zip
                       -b to generate boot.img
                       -s to sideload built zip file
-              Example: 'launch guacamole user -wg'
+                      -o to set the destination dir (relative) of generated ota zip file, boot.img and such
 - gen_info:   Print ota info like md5, size, etc.
               Usage: gen_info [-j]
                       -j to generate json
@@ -90,6 +90,7 @@ function launch() {
     local fastbootZip=false
     local bootImage=false
     local sideloadZip=false
+    local outputDir
 
     local device=$1
     shift # Remove device name from options
@@ -101,7 +102,7 @@ function launch() {
     variant=$1
     shift             # Remove build variant from options
     GAPPS_BUILD=false # Reset it here everytime
-    while getopts ":gwcjfbs" option; do
+    while getopts ":gwcjfbso:" option; do
         case $option in
         g) GAPPS_BUILD=true ;;
         w) wipe=true ;;
@@ -110,6 +111,7 @@ function launch() {
         f) fastbootZip=true ;;
         b) bootImage=true ;;
         s) sideloadZip=true ;;
+        o) outputDir="$OPTARG" ;;
         \?)
             __print_error "Invalid option, run hmm and learn the proper syntax"
             return 1
@@ -121,24 +123,38 @@ function launch() {
     # Execute rest of the commands now as all vars are set.
     startTime=$(date "+%s")
 
-    lunch "krypton_$device-$variant" &&
-        if $wipe; then
-            make clean
-        elif $installclean; then
-            make install-clean
-        fi &&
-        make -j"$(nproc --all)" kosp &&
-        __rename_zip &&
+    if ! lunch "krypton_$device-$variant"; then
+        return 1
+    fi
+
+    if [ -z "$outputDir" ]; then
+        outputDir="$OUT"
+    fi
+
+    if $wipe; then
+        make clean
+        rm -rf "${outputDir:?}/*"
+    elif $installclean; then
+        make install-clean
+        rm -rf "${outputDir:?}/*"
+    fi
+
+    if [ ! -d "$outputDir" ]; then
+        mkdir -p "$outputDir"
+    fi
+
+    make -j"$(nproc --all)" kosp &&
+        __rename_zip "$outputDir" &&
         if $json; then
-            gen_info "-j"
+            gen_info "-j" -o "$outputDir"
         else
-            gen_info
+            gen_info -o "$outputDir"
         fi &&
         if $fastbootZip; then
-            gen_fastboot_zip
+            gen_fastboot_zip "$outputDir"
         fi &&
         if $bootImage; then
-            gen_boot_image
+            gen_boot_image "$outputDir"
         fi
     local STATUS=$?
 
@@ -172,7 +188,10 @@ function __rename_zip() {
     local TIME
     TIME=$(date "+%Y%m%d-%H%M")
     FILE="KOSP-$VERSION-$KRYPTON_BUILD-$VARIANT-$STATUS-$TYPE-$TIME.zip"
-    local DST_FILE=$OUT/$FILE
+    if [ ! -d "$1" ]; then
+        mkdir -p "$1"
+    fi
+    local DST_FILE=$1/$FILE
     if ! [[ "$DST_FILE" == "$FILE" ]]; then
         mv "$FULL_PATH" "$DST_FILE"
     fi
@@ -182,11 +201,34 @@ function __rename_zip() {
 function gen_info() {
     croot
     local GIT_BRANCH="A12"
+    local json=false
+    local outDir="$OUT"
+
+    OPTIND=1
+    while getopts ":jo:" option; do
+        case $option in
+        j) json=true ;;
+        o) outDir="$OPTARG" ;;
+        \?)
+            __print_error "Invalid option passed to gen_info, run hmm and learn the proper syntax"
+            return 1
+            ;;
+        esac
+    done
+
+    if [ ! -d $outDir ] ; then
+        __print_error "Output dir $outDir doesn't exist"
+        return 1
+    fi
 
     # Check if ota is present
     [ -z "$KRYPTON_BUILD" ] && __print_error "Have you run lunch?" && return 1
 
-    FILE=$(find "$OUT" -type f -name "KOSP*.zip" -printf "%p\n" | sort -n | tail -n 1)
+    FILE=$(find "$outDir" -type f -name "KOSP*.zip" -printf "%p\n" | sort -n | tail -n 1)
+    if [ -z "$FILE" ] ; then
+        __print_error "OTA file not found!"
+        return 1
+    fi
     NAME=$(basename "$FILE")
 
     SIZE=$(du -b "$FILE" | awk '{print $1}')
@@ -205,7 +247,7 @@ function gen_info() {
     local JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
     JSON=$JSON_DEVICE_DIR/ota.json
 
-    if [ -n "$1" ] && [ "$1" == "-j" ]; then
+    if $json; then
         if [ ! -d "$JSON_DEVICE_DIR" ]; then
             mkdir -p "$JSON_DEVICE_DIR"
         fi
@@ -239,7 +281,10 @@ function gen_fastboot_zip() {
     local tool="out/host/linux-x86/bin/img_from_target_files"
     local in_file
     in_file=$(find "$OUT"/obj/PACKAGING/target_files_intermediates -type f -name "krypton_$KRYPTON_BUILD-target_files-*.zip")
-    local out_file="$OUT/fastboot-img.zip"
+    if [ ! -d "$1" ]; then
+        mkdir -p "$1"
+    fi
+    local out_file="$1/fastboot-img.zip"
     $tool "$in_file" "$out_file"
     mkdir -p "$OUT"/fboot-tmp
     unzip -q "$out_file" -d "$OUT"/fboot-tmp
@@ -255,11 +300,14 @@ function gen_fastboot_zip() {
 function gen_boot_image() {
     croot
     local intermediates_dir
-    intermediates_dir=$(find "$OUT/obj/PACKAGING/target_files_intermediates" -type d -name "krypton_*" )
+    intermediates_dir=$(find "$OUT/obj/PACKAGING/target_files_intermediates" -type d -name "krypton_*")
     local boot_img="$intermediates_dir/IMAGES/boot.img"
     local timestamp
     timestamp=$(date +%Y_%d_%m)
-    local dest_boot_img="$OUT/boot_$timestamp.img"
+    if [ ! -d "$1" ]; then
+        mkdir -p "$1"
+    fi
+    local dest_boot_img="$1/boot_$timestamp.img"
     if cp "$boot_img" "$dest_boot_img"; then
         __print_info "Boot image  : $(realpath --relative-to="$PWD" "$dest_boot_img")"
     else
