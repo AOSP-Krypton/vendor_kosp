@@ -4,7 +4,7 @@ prebuilts/clang/host/linux-x86/dora-clang
 packages/apps/GamingMode
 packages/apps/GrapheneOS-Camera
 packages/apps/KOSP-Updater
-packages/apps/Matlog
+packages/apps/MatlogX
 packages/apps/Settings/KryptonSettings
 packages/resources/PreferenceExtensions
 vendor/krypton
