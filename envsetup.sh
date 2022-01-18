@@ -137,8 +137,9 @@ function launch() {
 
     if [ -z "$outputDir" ]; then
         outputDir="$OUT"
-    elif [ ! -d "$outputDir" ]; then
-        mkdir -p "$outputDir"
+    else
+        outputDir="$ANDROID_BUILD_TOP/$outputDir"
+        [ -d "$outputDir" ] || mkdir -p "$outputDir"
     fi
 
     make -j"$(nproc --all)" kosp &&
@@ -214,7 +215,7 @@ function gen_info() {
         esac
     done
 
-    if [ ! -d $outDir ] ; then
+    if [ ! -d "$outDir" ] ; then
         __print_error "Output dir $outDir doesn't exist"
         return 1
     fi
@@ -273,6 +274,7 @@ function get_prop_value() {
 }
 
 function gen_fastboot_zip() {
+    croot
     if [ ! -f "out/host/linux-x86/bin/img_from_target_files" ]; then
         make -j8 img_from_target_files
     fi
@@ -282,17 +284,23 @@ function gen_fastboot_zip() {
     if [ ! -d "$1" ]; then
         mkdir -p "$1"
     fi
-    local out_file="$1/fastboot-img.zip"
-    $tool "$in_file" "$out_file"
-    mkdir -p "$OUT"/fboot-tmp
-    unzip -q "$out_file" -d "$OUT"/fboot-tmp
-    cd "$OUT"/fboot-tmp || return 1
-    zip -r -6 "$OUT/${NAME%.*}-img.zip" ./*
+    local tmp_dir="$OUT/fastboot-tmp"
+    if [ ! -d "$tmp_dir" ] ; then
+        mkdir -p "$tmp_dir"
+    else
+        rm -rf "${tmp_dir:?}"/*
+    fi
+    local out_file="$OUT/fastboot-img-uncompressed.zip"
+    [ -f "$out_file" ] && rm -rf "$out_file"
+    $tool "$in_file" "$out_file" || return 1
+    unzip -q "$out_file" -d "$tmp_dir" || return 1
+    local compressed_out_file="$1/${NAME%.*}-img.zip"
+    cd "$tmp_dir" || return 1
+    zip -r -j -6 "$compressed_out_file" ./* || return 1
     croot
-    rm -rf "$OUT"/fboot-tmp
-    local ret=$?
-    __print_info "Fastboot zip  : $(realpath --relative-to="$PWD" "$out_file")"
-    return $ret
+    rm -rf "$tmp_dir"
+    __print_info "Fastboot zip  : $(realpath --relative-to="$PWD" "$compressed_out_file")"
+    return 0
 }
 
 function gen_boot_image() {
