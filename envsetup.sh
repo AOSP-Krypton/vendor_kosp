@@ -127,19 +127,17 @@ function launch() {
         return 1
     fi
 
-    if [ -z "$outputDir" ]; then
-        outputDir="$OUT"
-    fi
-
     if $wipe; then
         make clean
-        rm -rf "${outputDir:?}/*"
+        [ -d "$outputDir" ] && rm -rf "${outputDir:?}/*"
     elif $installclean; then
         make install-clean
-        rm -rf "${outputDir:?}/*"
+        [ -d "$outputDir" ] && rm -rf "${outputDir:?}/*"
     fi
 
-    if [ ! -d "$outputDir" ]; then
+    if [ -z "$outputDir" ]; then
+        outputDir="$OUT"
+    elif [ ! -d "$outputDir" ]; then
         mkdir -p "$outputDir"
     fi
 
