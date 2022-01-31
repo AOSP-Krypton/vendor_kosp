@@ -234,14 +234,16 @@ function gen_info() {
     local SIZE_IN_GB
     SIZE_IN_GB=$(du -h "$FILE" | awk '{print $1}')
     MD5=$(md5sum "$FILE" | awk '{print $1}')
+    SHA512=$(sha512sum "$FILE" | awk '{print $1}')
 
     DATE=$(get_prop_value ro.build.date.utc)
     DATE=$((DATE * 1000))
 
-    __print_info "Name  : $NAME"
-    __print_info "Size  : $SIZE_IN_GB ($SIZE bytes)"
-    __print_info "Date  : $DATE"
-    __print_info "MD5   : $MD5"
+    __print_info "Name    : $NAME"
+    __print_info "Size    : $SIZE_IN_GB ($SIZE bytes)"
+    __print_info "Date    : $DATE"
+    __print_info "MD5     : $MD5"
+    __print_info "SHA-512 : $SHA512"
 
     local JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
     JSON=$JSON_DEVICE_DIR/ota.json
@@ -257,12 +259,15 @@ function gen_info() {
         # Generate ota json
         cat <<EOF >"$JSON"
 {
-    "version"   : "$VERSION",
-    "date"      : "$DATE",
-    "url"       : "https://downloads.kosp.workers.dev/0:/$GIT_BRANCH/$KRYPTON_BUILD/$NAME",
-    "filename"  : "$NAME",
-    "filesize"  : "$SIZE",
-    "md5"       : "$MD5"
+    "version"    : "$VERSION",
+    "date"       : "$DATE",
+    "url"        : "https://downloads.kosp.workers.dev/0:/$GIT_BRANCH/$KRYPTON_BUILD/$NAME",
+    "filename"   : "$NAME",
+    "file_name"  : "$NAME",
+    "filesize"   : "$SIZE",
+    "file_size"  : "$SIZE",
+    "md5"        : "$MD5",
+    "sha_512"    : "$SHA512"
 }
 EOF
         __print_info "JSON  : $JSON"
