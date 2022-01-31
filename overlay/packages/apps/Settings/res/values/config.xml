@@ -29,4 +29,7 @@
 
     <!-- Whether or not homepage should display user's account avatar -->
     <bool name="config_show_avatar_in_homepage">true</bool>
+
+    <!-- Whether system_update_settings should be shown or not. -->
+    <bool name="config_show_system_update_settings">false</bool>
 </resources>
