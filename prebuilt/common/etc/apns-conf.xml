@@ -7874,4 +7874,5 @@
     <apn apn="mms.ctimovil.com.uy" carrier="Claro MMS" mcc="748" mmsc="http://mms.ctimovil.com.uy" mnc="10" password="" port="" proxy="" type="mms" user=""/>
     <apn apn="gprs.claro.com.uy" carrier="Claro UY" mcc="748" mnc="10" password="ctigpr999" type="default,supl" user="ctigpr"/>
     <apn apn="mms.ctimovil.com.uy" carrier="Claro UY MMS" mcc="748" mmsc="http://mms.ctimovil.com.uy" mmsport="9201" mmsproxy="170.051.255.240" mnc="10" password="ctimms999" type="mms" user="ctimms"/>
+    <apn apn="datos" carrier="PTV Telecom" mcc="214" mnc="03" type="default,supl" protocol="IPV4V6" roaming_protocol="IPV4V6" mvno_type="imsi" mvno_match_data="21403x" />
 </apns>
