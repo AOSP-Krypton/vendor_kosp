@@ -11,10 +11,6 @@ PRODUCT_PACKAGES += \
     libprotobuf-cpp-full \
     librsjni
 
-# OTA Updater
-PRODUCT_PACKAGES += \
-    KOSP-Updater
-
 # GamingMode
 PRODUCT_PACKAGES += \
     GamingMode
