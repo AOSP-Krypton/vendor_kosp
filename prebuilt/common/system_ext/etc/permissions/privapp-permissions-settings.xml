@@ -4,5 +4,6 @@
         <permission name="lineageos.permission.HARDWARE_ABSTRACTION_ACCESS"/>
         <permission name="lineageos.permission.MANAGE_LIVEDISPLAY"/>
         <permission name="android.permission.UPDATE_FONTS" />
+        <permission name="android.permission.MANAGE_APP_LOCK" />
     </privapp-permissions>
 </permissions>
