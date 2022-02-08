@@ -1,4 +1,4 @@
-device/lineage/sepolicy
+device/krypton/sepolicy
 hardware/lineage/interfaces
 prebuilts/clang/host/linux-x86/dora-clang
 packages/apps/GamingMode
