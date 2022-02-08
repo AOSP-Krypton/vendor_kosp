@@ -144,8 +144,10 @@ fun merge() {
     if (continueMerge) {
         projectMap = projectMap.filterNot { savedStateMap[it.key]?.shouldSkip() == true }
     }
-    runBlocking(Dispatchers.Default) {
-        projectMap.entries.chunked(cores).forEach {
+    var chunks = projectMap.entries.size / cores
+    if (chunks == 0) chunks = 1
+    runBlocking(Dispatchers.IO) {
+        projectMap.entries.chunked(chunks).forEach {
             launch {
                 mergeInternal(it)
             }
