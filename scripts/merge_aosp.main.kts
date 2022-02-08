@@ -41,6 +41,9 @@ private lateinit var tag: String
 // Whether to push after merging tag
 private var push = false
 
+// Whether to force push
+private var forcePush = false
+
 // Whether to bump version after successfully merging
 private var bump = false
 
@@ -66,6 +69,7 @@ fun help() {
                 "      Usage: merge_aosp [-t] <tag> [-p] [-b]\n" +
                 "             -t for aosp tag to merge\n" +
                 "             -p to push to github for all repos\n" +
+                "             -f to force push\n" +
                 "             -b to bump current minor version\n" +
                 "             -c to continue merge from the last saved state\n" +
                 "             -h to print this message\n" +
@@ -83,6 +87,7 @@ fun parseOptions() {
     }
     tag = Utils.getArgValue(Args.TAG, args)
     push = args.contains(Args.PUSH)
+    forcePush = args.contains(Args.FORCE_PUSH)
     bump = args.contains(Args.BUMP)
     continueMerge = args.contains(Args.CONTINUE)
 }
@@ -287,10 +292,11 @@ fun fetchAndMerge(path: String, name: String = path): Boolean {
  * @param name name of the git repo as given in the organization
  */
 fun pushToGit(path: String, name: String): Boolean {
-    val pushOut = ShellUtils.run(
-        "git push ${Constants.REMOTE_BASE_URL}/$name" +
-                " HEAD:${Constants.REMOTE_BRANCH}", path
-    )
+    val cmds = mutableListOf("git", "push")
+    if (forcePush) cmds.add("-f")
+    cmds.add("${Constants.REMOTE_BASE_URL}/$name")
+    cmds.add("HEAD:${Constants.REMOTE_BRANCH}")
+    val pushOut = ShellUtils.run(cmds.joinToString(" "), path)
     if (pushOut.exitCode != 0) {
         Log.error("Failed to push $path, reason: ${pushOut.error}")
         return false
@@ -373,6 +379,7 @@ object Args {
     const val TAG = "-t"
     const val BUMP = "-b"
     const val PUSH = "-p"
+    const val FORCE_PUSH = "-f"
     const val CONTINUE = "-c"
     const val HELP = "-h"
 }
