@@ -2,7 +2,7 @@ device/krypton/sepolicy
 hardware/lineage/interfaces
 prebuilts/clang/host/linux-x86/dora-clang
 packages/apps/GamingMode
-packages/apps/GrapheneOS-Camera
+packages/apps/Camera
 packages/apps/KOSP-Updater
 packages/apps/MatlogX
 packages/apps/Settings/KryptonSettings
