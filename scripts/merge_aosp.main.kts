@@ -28,8 +28,8 @@ import org.w3c.dom.Element
 import org.w3c.dom.Node
 
 // Manifest xml to get repositories for merging aosp
-private val manifest = File("${ManifestAttrs.MANIFEST_REPO_PATH}/snippets/krypton.xml")
-private val excludeFile = File(Constants.MERGE_EXCLUDE_FILE)
+private val manifest = File(ManifestAttrs.KRYPTON_MANIFEST)
+private val aospManifest = File(ManifestAttrs.AOSP_MANIFEST)
 
 private val savedStateMap = mutableMapOf<String, SavedState>()
 
@@ -56,8 +56,8 @@ if (continueMerge) parseSavedState()
 merge()
 // Bump version and push if specified
 if (bump) {
-    bumpVersion()
-    if (push) pushToGit(Constants.VENDOR_PATH, Constants.VENDOR_REPO)
+    _bumpVersion()
+    if (push) _pushToGit(Constants.VENDOR_PATH, Constants.VENDOR_REPO)
 }
 
 /**
@@ -128,8 +128,8 @@ fun parseStateFromString(line: String): SavedState {
 }
 
 /**
- * Fetches project list parsed from [manifest], excluding the
- * one's returned from [getExcludeList], and then sequentially
+ * Fetches project list parsed from [manifest], including only the
+ * common repos in [aospManifest], and then sequentially
  * fetches and merges AOSP tag.
  */
 fun merge() {
@@ -138,7 +138,7 @@ fun merge() {
     Log.info("Kicking off merge with tag $tag")
     // Merge in all repositories
     val cores = Runtime.getRuntime().availableProcessors()
-    var projectMap = getProjectMap(getExcludeList()).filter {
+    var projectMap = _getProjectMap().filter {
         ShellUtils.run("git -C ${it.key} rev-parse").exitCode == 0
     }
     if (continueMerge) {
@@ -149,14 +149,14 @@ fun merge() {
     runBlocking(Dispatchers.IO) {
         projectMap.entries.chunked(chunks).forEach {
             launch {
-                mergeInternal(it)
+                _mergeInternal(it)
             }
         }
     }
-    if (savedStateMap.isNotEmpty()) saveStateMapToFile()
+    if (savedStateMap.isNotEmpty()) _saveStateMapToFile()
     // Merge in manifest
-    fetchAndMerge(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
-    if (push) pushToGit(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
+    _fetchAndMerge(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
+    if (push) _pushToGit(ManifestAttrs.MANIFEST_REPO_PATH, ManifestAttrs.MANIFEST_REPO_NAME)
 }
 
 /**
@@ -164,24 +164,24 @@ fun merge() {
  *
  * @param projects the list of subprojects
  */
-suspend fun mergeInternal(projects: List<Map.Entry<String, String>>) {
+suspend fun _mergeInternal(projects: List<Map.Entry<String, String>>) {
     projects.forEach {
         // Check if we should merge
         if (savedStateMap[it.key]?.merged != true) {
             // build/make repo is platform/build in aosp, so we need to pass in separate
             // path and repo name
             val success = if (it.key == ManifestAttrs.BUILD_REPO_PATH) {
-                fetchAndMerge(it.key, ManifestAttrs.BUILD_REPO_NAME)
+                _fetchAndMerge(it.key, ManifestAttrs.BUILD_REPO_NAME)
             } else {
-                fetchAndMerge(it.key)
+                _fetchAndMerge(it.key)
             }
-            if (success) updateStateLocked(it.key, merged = true, pushed = false)
+            if (success) _updateStateLocked(it.key, merged = true, pushed = false)
         }
         // There is no need to check for saved state here since repos
         // that have already been merged and pushed are filtered out of
         // project list in the beginning
-        if (push && pushToGit(it.key, it.value)) {
-            updateStateLocked(it.key, merged = true, pushed = true)
+        if (push && _pushToGit(it.key, it.value)) {
+            _updateStateLocked(it.key, merged = true, pushed = true)
         }
     }
 }
@@ -193,7 +193,7 @@ suspend fun mergeInternal(projects: List<Map.Entry<String, String>>) {
  * @param merged whether merge was done in this repo
  * @param pushed whether repo was pushed to remote git repository
  */
-suspend fun updateStateLocked(path: String, merged: Boolean, pushed: Boolean) {
+suspend fun _updateStateLocked(path: String, merged: Boolean, pushed: Boolean) {
     mutex.lock()
     savedStateMap[path] = SavedState(merged, pushed)
     mutex.unlock()
@@ -204,7 +204,7 @@ suspend fun updateStateLocked(path: String, merged: Boolean, pushed: Boolean) {
  * of the format path;merged=boolean;pushed=boolean, and then saves
  * it to the [Constants.SAVED_STATE_FILE] file
  */
-fun saveStateMapToFile() {
+fun _saveStateMapToFile() {
     val stateFile = File(Constants.SAVED_STATE_FILE)
     try {
         FileOutputStream(stateFile).use {
@@ -219,33 +219,15 @@ fun saveStateMapToFile() {
 }
 
 /**
- * Returns a list of projects to be excluded from merging AOSP
- * tag. List is parsed from [excludeFile].
- */
-fun getExcludeList(): List<String> {
-    if (!excludeFile.isFile) return emptyList()
-    val list: List<String>
-    try {
-        list = FileInputStream(excludeFile).bufferedReader().use {
-            it.readText()
-        }.split("\n").filter { it.isNotBlank() }
-    } catch (e: IOException) {
-        Log.fatal("IOException while parsing exclude list, ${e.message}")
-        exitProcess(1)
-    }
-    return list
-}
-
-/**
  * Returns a map of project path to it's name, parsed from [manifest].
  *
  * @param exclude [List] of project paths to exclude from the parsed list.
  */
-fun getProjectMap(exclude: List<String>): Map<String, String> {
+fun _getProjectMap(): Map<String, String> {
+    val aospProjectPaths = _getAospProjectPaths()
     val map = mutableMapOf<String, String>()
     try {
-        val factory = DocumentBuilderFactory.newInstance()
-        val docBuilder = factory.newDocumentBuilder()
+        val docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
         val doc: Document = docBuilder.parse(manifest)
         val projectNodeList = doc.getElementsByTagName(ManifestAttrs.PROJECT)
         for (i in 0 until projectNodeList.length) {
@@ -253,11 +235,30 @@ fun getProjectMap(exclude: List<String>): Map<String, String> {
             if (node.nodeType != Node.ELEMENT_NODE) continue
             val element = (node as Element)
             val path = element.getAttribute(ManifestAttrs.PATH)
-            if (!exclude.contains(path)) {
+            if (aospProjectPaths.contains(path)) {
                 map[path] = element.getAttribute(ManifestAttrs.NAME)
             }
         }
         return map
+    } catch (e: Exception) {
+        Log.fatal(e.message)
+        exitProcess(1)
+    }
+}
+
+fun _getAospProjectPaths(): List<String> {
+    val list = mutableListOf<String>()
+    try {
+        val docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        val doc: Document = docBuilder.parse(aospManifest)
+        val projectNodeList = doc.getElementsByTagName(ManifestAttrs.PROJECT)
+        for (i in 0 until projectNodeList.length) {
+            val node: Node = projectNodeList.item(i)
+            if (node.nodeType != Node.ELEMENT_NODE) continue
+            val element = (node as Element)
+            list.add(element.getAttribute(ManifestAttrs.PATH))
+        }
+        return list
     } catch (e: Exception) {
         Log.fatal(e.message)
         exitProcess(1)
@@ -271,7 +272,7 @@ fun getProjectMap(exclude: List<String>): Map<String, String> {
  * @param name the name of the repository to fetch from. Should be whatever that
  * comes after [ManifestAttrs.PLATFORM_URL] for this repo's url
  */
-fun fetchAndMerge(path: String, name: String = path): Boolean {
+fun _fetchAndMerge(path: String, name: String = path): Boolean {
     val url = "${ManifestAttrs.PLATFORM_URL}/$name"
     val fetchOut = ShellUtils.run("git fetch $url $tag", path)
     if (fetchOut.exitCode != 0) {
@@ -293,7 +294,7 @@ fun fetchAndMerge(path: String, name: String = path): Boolean {
  * @param path path of git repo to push
  * @param name name of the git repo as given in the organization
  */
-fun pushToGit(path: String, name: String): Boolean {
+fun _pushToGit(path: String, name: String): Boolean {
     val cmds = mutableListOf("git", "push")
     if (forcePush) cmds.add("-f")
     cmds.add("${Constants.REMOTE_BASE_URL}/$name")
@@ -310,7 +311,7 @@ fun pushToGit(path: String, name: String): Boolean {
 /**
  * Bumps minor version (KRYPTON_VERSION_MINOR) by 1 in file [Constants.PROP_FILE]
  */
-fun bumpVersion() {
+fun _bumpVersion() {
     val propFile = File(Constants.PROP_FILE)
     if (!propFile.isFile) {
         Log.fatal("${Constants.PROP_FILE} is non-existent, bumping version unsuccessful")
@@ -377,7 +378,7 @@ class SavedState(
 /**
  * Supported command line arguments
  */
-object Args {
+private object Args {
     const val TAG = "-t"
     const val BUMP = "-b"
     const val PUSH = "-p"
@@ -386,7 +387,7 @@ object Args {
     const val HELP = "-h"
 }
 
-object ManifestAttrs {
+private object ManifestAttrs {
     const val PLATFORM_URL = "https://android.googlesource.com/platform"
     const val PROJECT = "project"
     const val PATH = "path"
@@ -397,9 +398,11 @@ object ManifestAttrs {
 
     const val MANIFEST_REPO_NAME = "manifest"
     const val MANIFEST_REPO_PATH = ".repo/manifests"
+    const val KRYPTON_MANIFEST = "$MANIFEST_REPO_PATH/snippets/krypton.xml"
+    const val AOSP_MANIFEST = "$MANIFEST_REPO_PATH/default.xml"
 }
 
-object Constants {
+private object Constants {
     const val REMOTE_BASE_URL = "git@github.com:AOSP-Krypton"
     const val REMOTE_BRANCH = "A12"
 
