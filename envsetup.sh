@@ -30,11 +30,13 @@ INFO="${LG}Info"
 GAPPS_BUILD=false
 export GAPPS_BUILD
 
+incremental=false
+
 function krypton_help() {
     cat <<EOF
 Krypton specific functions:
 - launch:     Build a full ota package.
-              Usage: launch <device> <variant> [-g] [-w] [-c] [-f] [-o]
+              Usage: launch <device> <variant> [-g] [-w] [-c] [-f] [-o] [-i]
                       -g to build gapps variant.
                       -w to wipe out directory.
                       -c to do an install-clean.
@@ -43,6 +45,10 @@ Krypton specific functions:
                       -b to generate boot.img
                       -s to sideload built zip file
                       -o to set the destination dir (relative) of generated ota zip file, boot.img and such
+                      -i to specify directory containing incremental update zip to generate an incremental update.
+                         If the directory does not contain target files then default target is built, otherwise
+                         incremental target is built. New target files will be copied and replaced in this dir
+                         for each build.
 - gen_info:   Print ota info like md5, size, etc.
               Usage: gen_info [-j]
                       -j to generate json
@@ -91,6 +97,7 @@ function launch() {
     local bootImage=false
     local sideloadZip=false
     local outputDir
+    local targetFilesDir
 
     local device=$1
     shift # Remove device name from options
@@ -102,7 +109,7 @@ function launch() {
     variant=$1
     shift             # Remove build variant from options
     GAPPS_BUILD=false # Reset it here everytime
-    while getopts ":gwcjfbso:" option; do
+    while getopts ":gwcjfbso:i:" option; do
         case $option in
         g) GAPPS_BUILD=true ;;
         w) wipe=true ;;
@@ -112,6 +119,7 @@ function launch() {
         b) bootImage=true ;;
         s) sideloadZip=true ;;
         o) outputDir="$OPTARG" ;;
+        i) targetFilesDir="$OPTARG" ;;
         \?)
             __print_error "Invalid option, run hmm and learn the proper syntax"
             return 1
@@ -142,8 +150,39 @@ function launch() {
         [ -d "$outputDir" ] || mkdir -p "$outputDir"
     fi
 
-    make -j"$(nproc --all)" kosp &&
+    if [ -n "$targetFilesDir" ]; then
+        incremental=true
+        if [ ! -d "$targetFilesDir" ]; then
+            mkdir -p "$targetFilesDir"
+        fi
+    else
+        incremental=false
+    fi
+
+    local target="kosp"
+    local previousTargetFile
+    if $incremental; then
+        previousTargetFile=$(ls -A "$targetFilesDir" | head -n 1)
+        if [ -n "$previousTargetFile" ]; then
+            target="kosp-incremental"
+            export PREVIOUS_TARGET_FILES_PACKAGE="$targetFilesDir/$previousTargetFile"
+        else
+            __print_info "Previous target files package not present, using default target"
+            export PREVIOUS_TARGET_FILES_PACKAGE=
+        fi
+    fi
+    if ! $incremental && [ -n "$PREVIOUS_TARGET_FILES_PACKAGE" ]; then
+        export PREVIOUS_TARGET_FILES_PACKAGE=
+    fi
+
+    make "-j$(nproc --all)" "$target" &&
         __rename_zip "$outputDir" &&
+        if [ -n "$previousTargetFile" ]; then
+            rm -rf "$previousTargetFile"
+        fi &&
+        if [ -d "$targetFilesDir" ]; then
+            __copy_new_target_files
+        fi &&
         if $json; then
             gen_info "-j" -o "$outputDir"
         else
@@ -175,26 +214,24 @@ function __rename_zip() {
     FULL_PATH=$(find "$OUT" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{print $2}')
     local FILE
     FILE=$(basename "$FULL_PATH")
-    local FILENAME=${FILE%.*}
-    local VERSION
-    VERSION=$(cut -d'-' -f2 <<<"$FILENAME")
-    local VARIANT
-    VARIANT=$(cut -d'-' -f4 <<<"$FILENAME")
-    local STATUS
-    STATUS=$(cut -d'-' -f5 <<<"$FILENAME")
-    local TYPE
-    TYPE=$(cut -d'-' -f6 <<<"$FILENAME")
     local TIME
     TIME=$(date "+%Y%m%d-%H%M")
-    FILE="KOSP-$VERSION-$KRYPTON_BUILD-$VARIANT-$STATUS-$TYPE-$TIME.zip"
+    FILE=$(sed -r "s/-*[0-9]*-[0-9]*.zip/.zip/; s/.zip/-$TIME.zip/" <<<$FILE)
     if [ ! -d "$1" ]; then
         mkdir -p "$1"
     fi
-    local DST_FILE=$1/$FILE
+    local DST_FILE="$1/$FILE"
     if ! [[ "$DST_FILE" == "$FILE" ]]; then
         mv "$FULL_PATH" "$DST_FILE"
     fi
     __print_info "Build file $(realpath --relative-to="$PWD" "$DST_FILE")"
+}
+
+function __copy_new_target_files() {
+    local newTargetFile
+    newTargetFile=$(find "$OUT" -type f -name "*target_files*.zip" -print -quit)
+    __print_info "Copying new target files package"
+    cp "$newTargetFile" "$targetFilesDir"
 }
 
 function gen_info() {

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-KOSP_OTA := $(PRODUCT_OUT)/$(KOSP_OTA_PACKAGE_NAME)
+KOSP_OTA := $(PRODUCT_OUT)/$(KOSP_OTA_PACKAGE_NAME).zip
 
 $(KOSP_OTA): $(BUILT_TARGET_FILES_PACKAGE) $(OTA_FROM_TARGET_FILES)
 	$(call build-ota-package-target,$@,-k $(DEFAULT_KEY_CERT_PAIR) --output_metadata_path $(INTERNAL_OTA_METADATA))
@@ -21,3 +21,19 @@ $(KOSP_OTA): $(BUILT_TARGET_FILES_PACKAGE) $(OTA_FROM_TARGET_FILES)
 
 .PHONY: kosp
 kosp: $(KOSP_OTA)
+
+ifneq ($(strip $(PREVIOUS_TARGET_FILES_PACKAGE)),)
+INCREMENTAL_OTA_PACKAGE_TARGET := $(PRODUCT_OUT)/$(KOSP_OTA_PACKAGE_NAME)-incremental.zip
+
+$(INCREMENTAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(OTA_FROM_TARGET_FILES)
+	@echo "KOSP incremental package: $@"
+	    $(OTA_FROM_TARGET_FILES) \
+	    --block \
+	    -p $(SOONG_HOST_OUT) \
+	    -k $(DEFAULT_KEY_CERT_PAIR) \
+	    -i $(PREVIOUS_TARGET_FILES_PACKAGE) \
+	    $(BUILT_TARGET_FILES_PACKAGE) $@
+
+.PHONY: kosp-incremental
+kosp-incremental: $(INCREMENTAL_OTA_PACKAGE_TARGET)
+endif
