@@ -27,10 +27,7 @@ ERROR="${LR}Error"
 INFO="${LG}Info"
 
 # Set to non gapps build by default
-GAPPS_BUILD=false
-export GAPPS_BUILD
-
-incremental=false
+export GAPPS_BUILD=false
 
 function krypton_help() {
     cat <<EOF
@@ -97,6 +94,7 @@ function launch() {
     local bootImage=false
     local sideloadZip=false
     local outputDir
+    local incremental=false
     local targetFilesDir
 
     local device=$1
