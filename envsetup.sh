@@ -216,7 +216,7 @@ function launch() {
 function __rename_zip() {
     croot
     local FULL_PATH
-    FULL_PATH=$(find "$OUT" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{print $2}')
+    FULL_PATH=$(find "$1" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{print $2}')
     local FILE
     FILE=$(basename "$FULL_PATH")
     FILE=$(__zip_append_timestamp "$FILE")
@@ -277,7 +277,7 @@ function gen_info() {
     # Check if ota is present
     [ -z "$KRYPTON_BUILD" ] && __print_error "Have you run lunch?" && return 1
 
-    FILE=$(find "$outDir" -type f -name "KOSP*.zip" -printf "%p\n" | sort -n | tail -n 1)
+    FILE=$(find "$outDir" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{ print $2 }')
     if [ -z "$FILE" ] ; then
         __print_error "OTA file not found!"
         return 1
