@@ -20,11 +20,13 @@ clear
 # Colors
 LR="\033[1;31m"
 LG="\033[1;32m"
+LY="\033[1;33m"
 NC="\033[0m"
 
 # Common tags
 ERROR="${LR}Error"
 INFO="${LG}Info"
+WARN="${LY}Warning"
 
 # Set to non gapps build by default
 export GAPPS_BUILD=false
@@ -36,7 +38,8 @@ Krypton specific functions:
               Usage: launch <device> <variant> [-g] [-w] [-c] [-f] [-o] [-i]
                       -g to build gapps variant.
                       -w to wipe out directory.
-                      -c to do an install-clean.
+                      -c to do an install-clean. Also deletes contents of target files dir before copying new target
+                         files if specified with -i option
                       -j to generate ota json for the device.
                       -f to generate fastboot zip
                       -b to generate boot.img
@@ -150,6 +153,9 @@ function launch() {
 
     if [ -n "$targetFilesDir" ]; then
         incremental=true
+        if $installclean; then
+            __print_warn "All files in $targetFilesDir will be deleted before copying new target files"
+        fi
         if [ ! -d "$targetFilesDir" ]; then
             mkdir -p "$targetFilesDir"
         fi
@@ -160,7 +166,7 @@ function launch() {
     local target="kosp"
     local previousTargetFile
     if $incremental; then
-        previousTargetFile=$(ls -A "$targetFilesDir" | head -n 1)
+        previousTargetFile=$(ls -A "$targetFilesDir" | sort -n | tail -n 1)
         if [ -n "$previousTargetFile" ]; then
             target="kosp-incremental"
             export PREVIOUS_TARGET_FILES_PACKAGE="$targetFilesDir/$previousTargetFile"
@@ -175,10 +181,11 @@ function launch() {
 
     make "-j$(nproc --all)" "$target" &&
         __rename_zip "$outputDir" &&
-        if [ -n "$previousTargetFile" ]; then
-            rm -rf "$previousTargetFile"
-        fi &&
         if [ -d "$targetFilesDir" ]; then
+            if $installclean; then
+                __print_info "Deleting old target files"
+                rm -rf ${targetFilesDir:?}/*
+            fi
             __copy_new_target_files
         fi &&
         if $json; then
@@ -212,9 +219,7 @@ function __rename_zip() {
     FULL_PATH=$(find "$OUT" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{print $2}')
     local FILE
     FILE=$(basename "$FULL_PATH")
-    local TIME
-    TIME=$(date "+%Y%m%d-%H%M")
-    FILE=$(sed -r "s/-*[0-9]*-[0-9]*.zip/.zip/; s/.zip/-$TIME.zip/" <<<$FILE)
+    FILE=$(__zip_append_timestamp "$FILE")
     if [ ! -d "$1" ]; then
         mkdir -p "$1"
     fi
@@ -225,11 +230,25 @@ function __rename_zip() {
     __print_info "Build file $(realpath --relative-to="$PWD" "$DST_FILE")"
 }
 
+function __zip_append_timestamp() {
+    local TIME
+    TIME=$(date "+%Y%m%d-%H%M")
+    local APPENDED_ZIP
+    APPENDED_ZIP=$(sed -r "s/-*[0-9]*-*[0-9]*.zip//" <<<"$1")-"$TIME.zip"
+    echo "$APPENDED_ZIP"
+}
+
 function __copy_new_target_files() {
     local newTargetFile
     newTargetFile=$(find "$OUT" -type f -name "*target_files*.zip" -print -quit)
+    if [ -z "$newTargetFile" ]; then
+        return 1
+    fi
+    local destTargetFile
+    destTargetFile=$(basename "$newTargetFile")
+    destTargetFile=$(__zip_append_timestamp "$destTargetFile")
     __print_info "Copying new target files package"
-    cp "$newTargetFile" "$targetFilesDir"
+    cp "$newTargetFile" "$targetFilesDir/$destTargetFile"
 }
 
 function gen_info() {
@@ -400,6 +419,10 @@ function merge_aosp() {
 
 function __print_info() {
     echo -e "${INFO}: $*${NC}"
+}
+
+function __print_warn() {
+    echo -e "${WARN}: $*${NC}"
 }
 
 function __print_error() {
