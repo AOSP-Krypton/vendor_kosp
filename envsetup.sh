@@ -35,23 +35,25 @@ function krypton_help() {
     cat <<EOF
 Krypton specific functions:
 - launch:     Build a full ota package.
-              Usage: launch <device> <variant> [-g] [-w] [-c] [-f] [-o] [-i]
-                      -g to build gapps variant.
-                      -w to wipe out directory.
-                      -c to do an install-clean. Also deletes contents of target files dir before copying new target
+              Usage: launch <device> <variant> [OPTIONS]
+                      [-g | --gapps] to build gapps variant.
+                      [-w | --wipe] to wipe out directory.
+                      [-c] to do an install-clean. Also deletes contents of target files dir before copying new target
                          files if specified with -i option
-                      -j to generate ota json for the device.
-                      -f to generate fastboot zip
-                      -b to generate boot.img
-                      -s to sideload built zip file
-                      -o to set the destination dir (relative) of generated ota zip file, boot.img and such
-                      -i to specify directory containing incremental update zip to generate an incremental update.
+                      [-j] to generate ota json for the device.
+                      [-f] to generate fastboot zip
+                      [-b] to generate boot.img
+                      [-s | --sideload] to sideload built zip file
+                      [-o | --output-dir] to set the destination dir (relative) of generated ota zip file, boot.img and such
+                      [-i | --incremental] to specify directory containing incremental update zip to generate an incremental update.
                          If the directory does not contain target files then default target is built, otherwise
-                         incremental target is built. New target files will be copied and replaced in this dir
-                         for each build.
+                         incremental target is built. New target files will be copied and replaced in this directory
+                         for each build. Do note that this directory will be wiped before copying new files.
+                      [--build-both-targets] to build full OTA along with an incremental OTA.
 - gen_info:   Print ota info like md5, size, etc.
-              Usage: gen_info [-j]
-                      -j to generate json
+              Usage: gen_info [OPTIONS]
+                      [-j] to generate json
+                      [-o] to set the destination dir (relative) which contains generated ota zip file
 - search:     Search in every file in the current directory for a string. Uses xargs for parallel search.
               Usage: search <string>
 - reposync:   Sync repo with with some additional flags
@@ -98,6 +100,7 @@ function launch() {
     local sideloadZip=false
     local outputDir
     local incremental=false
+    local buildBothTargets=false
     local targetFilesDir
 
     local device=$1
@@ -110,24 +113,67 @@ function launch() {
     variant=$1
     shift             # Remove build variant from options
     GAPPS_BUILD=false # Reset it here everytime
-    while getopts ":gwcjfbso:i:" option; do
-        case $option in
-        g) GAPPS_BUILD=true ;;
-        w) wipe=true ;;
-        c) installclean=true ;;
-        j) json=true ;;
-        f) fastbootZip=true ;;
-        b) bootImage=true ;;
-        s) sideloadZip=true ;;
-        o) outputDir="$OPTARG" ;;
-        i) targetFilesDir="$OPTARG" ;;
-        \?)
-            __print_error "Invalid option, run hmm and learn the proper syntax"
+    local SHORT="g,w,c,j,f,b,s,o:,i:"
+    local LONG="output-dir:,incremental:,build-both-targets"
+    local OPTS
+    if ! OPTS=$(getopt -a -n launch --options $SHORT --longoptions $LONG -- "$@"); then
+        return 1
+    fi
+
+    eval set -- "$OPTS"
+
+    while :; do
+        case "$1" in
+        -g)
+            export GAPPS_BUILD=true
+            shift
+            ;;
+        -w)
+            wipe=true
+            shift
+            ;;
+        -c)
+            installclean=true
+            shift
+            ;;
+        -j)
+            json=true
+            shift
+            ;;
+        -f)
+            fastbootZip=true
+            shift
+            ;;
+        -b)
+            bootImage=true
+            shift
+            ;;
+        -s)
+            sideloadZip=true
+            shift
+            ;;
+        -o | --output-dir)
+            outputDir="$2"
+            shift 2
+            ;;
+        -i | --incremental)
+            targetFilesDir="$2"
+            shift 2
+            ;;
+        --build-both-targets)
+            buildBothTargets=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            __print_error "Unknown option: $1"
             return 1
             ;;
         esac
     done
-    export GAPPS_BUILD # Set whether to include gapps in the rom
 
     # Execute rest of the commands now as all vars are set.
     startTime=$(date "+%s")
@@ -152,47 +198,44 @@ function launch() {
     fi
 
     if [ -n "$targetFilesDir" ]; then
-        incremental=true
         if $installclean; then
             __print_warn "All files in $targetFilesDir will be deleted before copying new target files"
         fi
         if [ ! -d "$targetFilesDir" ]; then
             mkdir -p "$targetFilesDir"
         fi
-    else
-        incremental=false
     fi
 
-    local target="kosp"
+    local targets="kosp"
     local previousTargetFile
-    if $incremental; then
-        previousTargetFile=$(ls -A "$targetFilesDir" | sort -n | tail -n 1)
+    if [ -n "$targetFilesDir" ] ; then
+        previousTargetFile=$(find "$targetFilesDir" -type f -name "*target_files*.zip" | sort -n | tail -n 1)
         if [ -n "$previousTargetFile" ]; then
-            target="kosp-incremental"
-            export PREVIOUS_TARGET_FILES_PACKAGE="$targetFilesDir/$previousTargetFile"
+            incremental=true
+            if $buildBothTargets; then
+                targets="kosp kosp-incremental"
+            else
+                targets="kosp-incremental"
+            fi
+            export PREVIOUS_TARGET_FILES_PACKAGE="$previousTargetFile"
         else
             __print_info "Previous target files package not present, using default target"
-            export PREVIOUS_TARGET_FILES_PACKAGE=
         fi
     fi
     if ! $incremental && [ -n "$PREVIOUS_TARGET_FILES_PACKAGE" ]; then
         export PREVIOUS_TARGET_FILES_PACKAGE=
     fi
 
-    make "-j$(nproc --all)" "$target" &&
+    make "-j$(nproc --all)" "$targets" &&
         __rename_zip "$outputDir" &&
         if [ -d "$targetFilesDir" ]; then
             if $installclean; then
                 __print_info "Deleting old target files"
-                rm -rf ${targetFilesDir:?}/*
+                rm -rf "${targetFilesDir:?}"/*
             fi
             __copy_new_target_files
         fi &&
-        if $json; then
-            gen_info "-j" -o "$outputDir"
-        else
-            gen_info -o "$outputDir"
-        fi &&
+        gen_info -j "$json" -o "$outputDir" -i "$incremental" &&
         if $fastbootZip; then
             gen_fastboot_zip "$outputDir"
         fi &&
@@ -256,12 +299,14 @@ function gen_info() {
     local GIT_BRANCH="A12"
     local json=false
     local outDir="$OUT"
+    local incremental=false
 
     OPTIND=1
-    while getopts ":jo:" option; do
+    while getopts ":j:o:i:" option; do
         case $option in
-        j) json=true ;;
+        j) json="$OPTARG" ;;
         o) outDir="$OPTARG" ;;
+        i) incremental="$OPTARG" ;;
         \?)
             __print_error "Invalid option passed to gen_info, run hmm and learn the proper syntax"
             return 1
@@ -269,7 +314,7 @@ function gen_info() {
         esac
     done
 
-    if [ ! -d "$outDir" ] ; then
+    if [ ! -d "$outDir" ]; then
         __print_error "Output dir $outDir doesn't exist"
         return 1
     fi
@@ -278,14 +323,13 @@ function gen_info() {
     [ -z "$KRYPTON_BUILD" ] && __print_error "Have you run lunch?" && return 1
 
     FILE=$(find "$outDir" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{ print $2 }')
-    if [ -z "$FILE" ] ; then
+    if [ -z "$FILE" ]; then
         __print_error "OTA file not found!"
         return 1
     fi
     NAME=$(basename "$FILE")
 
     SIZE=$(du -b "$FILE" | awk '{print $1}')
-    local SIZE_IN_GB
     SIZE_IN_GB=$(du -h "$FILE" | awk '{print $1}')
     MD5=$(md5sum "$FILE" | awk '{print $1}')
     SHA512=$(sha512sum "$FILE" | awk '{print $1}')
@@ -299,18 +343,39 @@ function gen_info() {
     __print_info "MD5     : $MD5"
     __print_info "SHA-512 : $SHA512"
 
+    if ! $json; then
+        return 0
+    fi
+
     local JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
     JSON=$JSON_DEVICE_DIR/ota.json
+    local pre_build_incremental
+    if $incremental; then
+        JSON=$JSON_DEVICE_DIR/incremental_ota.json
+        pre_build_incremental=$(unzip -o -p "$FILE" META-INF/com/android/metadata | grep pre-build-incremental | awk -F "=" '{ print $2 }')
+    fi
 
-    if $json; then
-        if [ ! -d "$JSON_DEVICE_DIR" ]; then
-            mkdir -p "$JSON_DEVICE_DIR"
-        fi
+    if [ ! -d "$JSON_DEVICE_DIR" ]; then
+        mkdir -p "$JSON_DEVICE_DIR"
+    fi
 
-        local VERSION
-        VERSION=$(get_prop_value ro.krypton.build.version)
+    local VERSION
+    VERSION=$(get_prop_value ro.krypton.build.version)
 
-        # Generate ota json
+    # Generate ota json
+    if $incremental; then
+        cat <<EOF >"$JSON"
+{
+    "version"               : "$VERSION",
+    "date"                  : "$DATE",
+    "url"                   : "https://downloads.kosp.workers.dev/0:/$GIT_BRANCH/$KRYPTON_BUILD/$NAME",
+    "file_name"             : "$NAME",
+    "file_size"             : "$SIZE",
+    "sha_512"               : "$SHA512",
+    "pre_build_incremental" : "$pre_build_incremental"
+}
+EOF
+    else
         cat <<EOF >"$JSON"
 {
     "version"    : "$VERSION",
@@ -324,8 +389,8 @@ function gen_info() {
     "sha_512"    : "$SHA512"
 }
 EOF
-        __print_info "JSON  : $JSON"
     fi
+    __print_info "JSON  : $JSON"
 }
 
 function get_prop_value() {
@@ -344,7 +409,7 @@ function gen_fastboot_zip() {
         mkdir -p "$1"
     fi
     local tmp_dir="$OUT/fastboot-tmp"
-    if [ ! -d "$tmp_dir" ] ; then
+    if [ ! -d "$tmp_dir" ]; then
         mkdir -p "$tmp_dir"
     else
         rm -rf "${tmp_dir:?}"/*
