@@ -14,7 +14,7 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     GamingMode
 
-TARGET_BUILD_LAWNCHAIR ?= true
+TARGET_BUILD_LAWNCHAIR ?= false
 ifeq ($(strip $(TARGET_BUILD_LAWNCHAIR)),true)
 include vendor/lawnchair/lawnchair.mk
 endif
