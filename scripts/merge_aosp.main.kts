@@ -298,7 +298,7 @@ fun _pushToGit(path: String, name: String): Boolean {
     val cmds = mutableListOf("git", "push")
     if (forcePush) cmds.add("-f")
     cmds.add("${Constants.REMOTE_BASE_URL}/$name")
-    cmds.add("HEAD:${Constants.REMOTE_BRANCH}")
+    cmds.add("HEAD:refs/heads/${Constants.REMOTE_BRANCH}")
     val pushOut = ShellUtils.run(cmds.joinToString(" "), path)
     if (pushOut.exitCode != 0) {
         Log.error("Failed to push $path, reason: ${pushOut.error}")
