@@ -319,9 +319,9 @@ function gen_json() {
     fi
 
     local FILE
-    FILE=$(find "$outDir" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | grep -vE "incremental|img" | tail -n 1 | awk '{ print $2 }')
+    FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep -vE "incremental|img" | tail -n 1 | awk '{ print $2 }')
     local INCREMENTAL_FILE
-    INCREMENTAL_FILE=$(find "$outDir" -type f -name "KOSP*.zip" -printf "%T@ %p\n" | grep "incremental" | tail -n 1 | awk '{ print $2 }')
+    INCREMENTAL_FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep "incremental" | tail -n 1 | awk '{ print $2 }')
     if [ ! -f "$FILE" ]; then
         __print_error "OTA file not found!"
         return 1
