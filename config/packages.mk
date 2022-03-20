@@ -40,3 +40,7 @@ endif
 # RRO Overlays
 PRODUCT_PACKAGES += \
     NavigationBarModeGesturalOverlayFS
+
+# Repainter integration
+PRODUCT_PACKAGES += \
+    RepainterServicePriv
