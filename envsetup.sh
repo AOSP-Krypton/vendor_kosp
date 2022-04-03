@@ -88,8 +88,6 @@ function fetchrepos() {
     $(which python3) vendor/krypton/build/tools/roomservice.py "$1"
 }
 
-alias mka="make -j$(nproc --all)"
-
 function launch() {
     OPTIND=1
     local variant
@@ -235,7 +233,7 @@ function launch() {
         targets="$targets kosp-boot"
     fi
 
-    mka "$targets" &&
+    m "$targets" &&
         if [ -d "$targetFilesDir" ]; then
             if $installclean; then
                 __print_info "Deleting old target files"
