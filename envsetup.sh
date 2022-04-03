@@ -88,6 +88,8 @@ function fetchrepos() {
     $(which python3) vendor/krypton/build/tools/roomservice.py "$1"
 }
 
+alias mka="make -j$(nproc --all)"
+
 function launch() {
     OPTIND=1
     local variant
@@ -229,8 +231,11 @@ function launch() {
     if $fastbootZip; then
         targets="$targets kosp-fastboot"
     fi
+    if $bootImage; then
+        targets="$targets kosp-boot"
+    fi
 
-    make "-j$(nproc --all)" "$targets" &&
+    mka "$targets" &&
         if [ -d "$targetFilesDir" ]; then
             if $installclean; then
                 __print_info "Deleting old target files"
@@ -240,9 +245,6 @@ function launch() {
         fi &&
         if $json; then
             gen_json -o "$outputDir" -i "$incremental"
-        fi &&
-        if $bootImage; then
-            gen_boot_image "$outputDir"
         fi
     local STATUS=$?
 
@@ -380,25 +382,6 @@ EOF
 
 function get_prop_value() {
     grep "$1" "$OUT/system/build.prop" | sed "s/$1=//"
-}
-
-function gen_boot_image() {
-    croot
-    local intermediates_dir
-    intermediates_dir=$(find "$OUT/obj/PACKAGING/target_files_intermediates" -type d -name "krypton_*")
-    local boot_img="$intermediates_dir/IMAGES/boot.img"
-    local timestamp
-    timestamp=$(date +%Y_%d_%m-%H_%M)
-    if [ ! -d "$1" ]; then
-        mkdir -p "$1"
-    fi
-    local dest_boot_img="$1/boot_$timestamp.img"
-    if cp "$boot_img" "$dest_boot_img"; then
-        __print_info "Boot image  : $(realpath --relative-to="$PWD" "$dest_boot_img")"
-    else
-        __print_error "Source boot image not found!"
-        return 1
-    fi
 }
 
 function search() {
