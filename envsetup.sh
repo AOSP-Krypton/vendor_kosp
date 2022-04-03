@@ -339,7 +339,7 @@ function gen_json() {
     local DATE
     DATE=$(($(get_prop_value ro.build.date.utc) * 1000))
 
-    local BASE_URL="https://downloads.kosp.workers.dev/0:/$GIT_BRANCH/$KRYPTON_BUILD/"
+    local BASE_URL="https://kosp.e11z.net/d/$GIT_BRANCH/$KRYPTON_BUILD/"
 
     local INCREMENTAL_NAME
     INCREMENTAL_NAME=$(basename "$INCREMENTAL_FILE")
