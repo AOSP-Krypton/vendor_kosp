@@ -52,6 +52,7 @@ kosp-fastboot: $(KOSP_FASTBOOT_PACKAGE)
 	@echo "KOSP fastboot package is ready"
 
 .PHONY: kosp-boot
-kosp-boot: $(INSTALLED_BOOTIMAGE_TARGET)
-	$(hide) cp $(INSTALLED_BOOTIMAGE_TARGET) $(KOSP_OUT)/$(KOSP_OTA_PACKAGE_NAME)-$(shell date "+%Y%m%d-%H%M")-boot.img
+kosp-boot: $(BUILT_TARGET_FILES_PACKAGE)
+	$(hide) cp <(unzip -o -q -p $(BUILT_TARGET_FILES_PACKAGE) IMAGES/boot.img) \
+	$(KOSP_OUT)/$(KOSP_OTA_PACKAGE_NAME)-$(shell date "+%Y%m%d-%H%M")-boot.img
 	@echo "Boot image copied"

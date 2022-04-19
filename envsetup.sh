@@ -51,7 +51,8 @@ Krypton specific functions:
                       [--build-both-targets] to build full OTA along with an incremental OTA. Only works when [-i] is provided.
 - gen_json:   Generate ota json info.
               Usage: gen_json [OPTIONS]
-                      [-i] true | false. Pass in true to create json for incremental along with regular OTA.
+                      [-i] true | false. Pass in true to create json for incremental OTA.
+                      [-b] true | false. Pass in true to create json for full OTA along with incremental OTA (-i must be true).
                       [-o] to set the destination dir (relative) which contains generated ota zip file.
 - search:     Search in every file in the current directory for a string. Uses xargs for parallel search.
               Usage: search <string>
@@ -96,11 +97,11 @@ function launch() {
     local json=false
     local fastbootZip=false
     local bootImage=false
-    local sideloadZip=false
     local outputDir
     local incremental=false
     local buildBothTargets=false
     local targetFilesDir
+    local wipeTargetFilesDir=false
 
     local device="$1"
     shift # Remove device name from options
@@ -129,10 +130,12 @@ function launch() {
             ;;
         -w)
             wipe=true
+            wipeTargetFilesDir=true
             shift
             ;;
         -c)
             installclean=true
+            wipeTargetFilesDir=true
             shift
             ;;
         -j)
@@ -145,10 +148,6 @@ function launch() {
             ;;
         -b)
             bootImage=true
-            shift
-            ;;
-        -s)
-            sideloadZip=true
             shift
             ;;
         -o | --output-dir)
@@ -199,7 +198,7 @@ function launch() {
     export KOSP_OUT="$outputDir"
 
     if [ -n "$targetFilesDir" ]; then
-        if $installclean; then
+        if $wipeTargetFilesDir; then
             __print_warn "All files in $targetFilesDir will be deleted before copying new target files"
         fi
         if [ ! -d "$targetFilesDir" ]; then
@@ -207,16 +206,16 @@ function launch() {
         fi
     fi
 
-    local targets="kosp"
+    local targets=("kosp")
     local previousTargetFile
-    if [ -n "$targetFilesDir" ] ; then
+    if [ -n "$targetFilesDir" ]; then
         previousTargetFile=$(find "$targetFilesDir" -type f -name "*target_files*.zip" | sort -n | tail -n 1)
         if [ -n "$previousTargetFile" ]; then
             incremental=true
             if $buildBothTargets; then
-                targets="kosp kosp-incremental"
+                targets+=("kosp-incremental")
             else
-                targets="kosp-incremental"
+                targets=("kosp-incremental")
             fi
             export PREVIOUS_TARGET_FILES_PACKAGE="$previousTargetFile"
         else
@@ -227,22 +226,25 @@ function launch() {
         export PREVIOUS_TARGET_FILES_PACKAGE=
     fi
     if $fastbootZip; then
-        targets="$targets kosp-fastboot"
+        targets+=("kosp-fastboot")
     fi
     if $bootImage; then
-        targets="$targets kosp-boot"
+        targets+=("kosp-boot")
     fi
 
-    m "$targets" &&
-        if [ -d "$targetFilesDir" ]; then
-            if $installclean; then
-                __print_info "Deleting old target files"
-                rm -rf "${targetFilesDir:?}"/*
-            fi
-            __copy_new_target_files
-        fi &&
+    for target in "${targets[@]}"; do
+        m "$target" || return 1
+    done
+
+    if [ -d "$targetFilesDir" ]; then
+        if $wipeTargetFilesDir; then
+            __print_info "Deleting old target files"
+            rm -rf "${targetFilesDir:?}"/*
+        fi
+        __copy_new_target_files
+    fi &&
         if $json; then
-            gen_json -o "$outputDir" -i "$incremental"
+            gen_json -o "$outputDir" -i "$incremental" -b "$buildBothTargets"
         fi
     local STATUS=$?
 
@@ -277,15 +279,18 @@ function __copy_new_target_files() {
 
 function gen_json() {
     croot
-    local GIT_BRANCH="A12"
+    local GIT_BRANCH
+    GIT_BRANCH="$(git -C vendor/krypton branch --show-current -q)"
     local outDir="$OUT"
     local incremental=false
+    local bothTargetsExist=false
 
     OPTIND=1
-    while getopts ":o:i:" option; do
+    while getopts ":o:i:b:" option; do
         case $option in
         o) outDir="$OPTARG" ;;
         i) incremental="$OPTARG" ;;
+        b) bothTargetsExist="$OPTARG" ;;
         \?)
             __print_error "Invalid option passed to gen_json, run hmm and learn the proper syntax"
             return 1
@@ -293,8 +298,18 @@ function gen_json() {
         esac
     done
 
+    if $bothTargetsExist && ! $incremental; then
+        echo "Both targets cannot exist if not incremental"
+        return 1
+    fi
+
     if [ ! -d "$outDir" ]; then
         __print_error "Output dir $outDir doesn't exist"
+        return 1
+    fi
+
+    if [ -z "$KRYPTON_BUILD" ]; then
+        __print_error "Have you run lunch?"
         return 1
     fi
 
@@ -312,20 +327,19 @@ function gen_json() {
     local VERSION
     VERSION=$(get_prop_value ro.krypton.build.version)
 
-    # Check if ota is present
-    if [ -z "$KRYPTON_BUILD" ]; then
-        __print_error "Have you run lunch?"
-        return 1
-    fi
-
     local FILE
     FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep -vE "incremental|img" | tail -n 1 | awk '{ print $2 }')
-    local INCREMENTAL_FILE
-    INCREMENTAL_FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep "incremental" | tail -n 1 | awk '{ print $2 }')
-    if [ ! -f "$FILE" ]; then
+    if ! $incremental && [ ! -f "$FILE" ]; then
         __print_error "OTA file not found!"
         return 1
     fi
+    if $incremental && $bothTargetsExist && [ ! -f "$FILE" ]; then
+        __print_error "OTA file not found!"
+        return 1
+    fi
+
+    local INCREMENTAL_FILE
+    INCREMENTAL_FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep "incremental" | tail -n 1 | awk '{ print $2 }')
     if $incremental && [ ! -f "$INCREMENTAL_FILE" ]; then
         __print_error "Incremental OTA file not found!"
         return 1
@@ -339,7 +353,7 @@ function gen_json() {
     local DATE
     DATE=$(($(get_prop_value ro.build.date.utc) * 1000))
 
-    local BASE_URL="https://kosp.e11z.net/d/$GIT_BRANCH/$KRYPTON_BUILD/"
+    local BASE_URL="https://kosp.e11z.net/d/$GIT_BRANCH/$KRYPTON_BUILD"
 
     local INCREMENTAL_NAME
     INCREMENTAL_NAME=$(basename "$INCREMENTAL_FILE")
@@ -357,10 +371,14 @@ function gen_json() {
     "pre_build_incremental" : "$pre_build_incremental"
 }
 EOF
+        # No need to proceed if full ota isn't present
+        if ! $bothTargetsExist; then
+            return 0
+        fi
     fi
 
     local NAME
-    NAME=$(basename $FILE)
+    NAME=$(basename "$FILE")
     local SIZE
     SIZE=$(du -b "$FILE" | awk '{print $1}')
     cat <<EOF >"$JSON"
@@ -388,8 +406,7 @@ function search() {
 }
 
 function reposync() {
-    local SYNC_ARGS="--optimized-fetch --no-clone-bundle --no-tags --current-branch"
-    repo sync -j"$(nproc --all)" $SYNC_ARGS "$@"
+    repo sync -j"$(nproc --all)" --optimized-fetch --no-clone-bundle --no-tags --current-branch "$@"
     return $?
 }
 
