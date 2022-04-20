@@ -61,6 +61,9 @@ Krypton specific functions:
 - keygen:     Generate keys for signing builds.
               Usage: keygen <dir>
               Default output dir is ${ANDROID_BUILD_TOP}/certs
+- syncpixelgapps:  Sync our Gapps repo.
+                  Usage: syncpixelgapps [-i]
+                  -i to initialize git lfs in all the source repos
 - sideload:   Sideload a zip while device is booted. It will boot to recovery, sideload the file and boot you back to system
               Usage: sideload [FILE]
 EOF
@@ -86,6 +89,28 @@ function fetchrepos() {
         return 1
     fi
     $(which python3) vendor/krypton/build/tools/roomservice.py "$1"
+}
+
+function syncpixelgapps() {
+  local sourceroot="${ANDROID_BUILD_TOP}/vendor/google"
+  [ ! -d $sourceroot ] && echo "${ERROR}: Gapps repo has not been synced!${NC}" && return 1
+  local gms="${sourceroot}/gms"
+  local pixel="${sourceroot}/pixel"
+
+  # Initialize git lfs in the repo
+  if [ ! -z $1 ] ; then
+    if [ $1 == "-i" ] ; then
+      for dir in $gms $pixel; do
+        cd $dir && git lfs install
+      done
+    fi
+  fi
+
+  # Fetch files
+  for dir in $gms $pixel; do
+    cd $dir && git lfs fetch && git lfs checkout
+  done
+  croot
 }
 
 function launch() {
