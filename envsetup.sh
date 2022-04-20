@@ -20,438 +20,413 @@ clear
 # Colors
 LR="\033[1;31m"
 LG="\033[1;32m"
-LP="\033[1;35m"
+LY="\033[1;33m"
 NC="\033[0m"
 
 # Common tags
 ERROR="${LR}Error"
 INFO="${LG}Info"
-WARN="${LP}Warning"
-
-# Add all officialy supported devices to an array
-krypton_products=()
-device=
-
-buildDate=
+WARN="${LY}Warning"
 
 # Set to non gapps build by default
-GAPPS_BUILD=false
-export GAPPS_BUILD
-
-function devices() {
-  local tmp="0"
-  local LIST="${ANDROID_BUILD_TOP}/vendor/krypton/products/products.list"
-  local print=false
-  krypton_products=()
-  # Check whether to print list of devices
-  [ ! -z $1 ] && [ $1 == "-p" ] && print=true && echo -e "${LG}List of officially supported devices and corresponding codes:${NC}"
-
-  while read -r product; do
-    if [ ! -z $product ] ; then
-      tmp=$(expr $tmp + 1)
-      krypton_products+=("$product:$tmp")
-      if $print ; then
-        echo -ne "${LP}$tmp:${NC} ${LG}$product${NC}\t"
-        local pos=$(expr $tmp % 3)
-        [ $pos -eq 0 ] && echo -ne "\n"
-      fi
-    fi
-  done < $LIST
-  $print && echo ""
-}
-devices
-official=false # Default to unofficial status
+export GAPPS_BUILD=false
 
 function krypton_help() {
-cat <<EOF
+    cat <<EOF
 Krypton specific functions:
-- cleanup:    Clean \$OUT directory, as well as intermediate zips if any.
-- launch:     Build a full ota.
-              Usage: launch <device | codenum> <variant> [-g] [-w] [-c] [-f]
-              codenum for your device can be obtained by running: devices -p
-              -g to build gapps variant.
-              -w to wipe out directory.
-              -c to do an install-clean.
-              -j to generate ota json for the device.
-              -f to generate fastboot zip
-              Example: 'launch 1 user -wg' , or 'launch guacamole user -wg'
-                    Both will do a clean user build with gapps for device guacamole (codenum 1)
-- devices:    Usage: devices -p
-              Prints all officially supported devices with their code numbers.
-- chk_device: Usage: chk_device <device>
-              Prints whether or not device is officially supported by KOSP
-- gen_info:   Print ota info like md5, size.
-              Usage: gen_info [-j]
-              -j to generate json
-- search:     Search in every file in the current directory for a string.Uses xargs for parallel search.
+- launch:     Build a full ota package.
+              Usage: launch <device> <variant> [OPTIONS]
+                      [-g | --gapps] to build gapps variant.
+                      [-w | --wipe] to wipe out directory.
+                      [-c] to do an install-clean. Also deletes contents of target files dir before copying new target
+                         files if specified with -i option
+                      [-j] to generate ota json for the device.
+                      [-f] to generate fastboot zip
+                      [-b] to generate boot.img
+                      [-o | --output-dir] to set the destination dir (relative) of generated ota zip file, boot.img and such
+                      [-i | --incremental] to specify directory containing incremental update zip to generate an incremental update.
+                         If the directory does not contain target files then default target is built, otherwise
+                         incremental target is built. New target files will be copied and replaced in this directory
+                         for each build. Do note that this directory will be wiped before copying new files.
+                      [--build-both-targets] to build full OTA along with an incremental OTA. Only works when [-i] is provided.
+- gen_json:   Generate ota json info.
+              Usage: gen_json [OPTIONS]
+                      [-i] true | false. Pass in true to create json for incremental along with regular OTA.
+                      [-o] to set the destination dir (relative) which contains generated ota zip file.
+- search:     Search in every file in the current directory for a string. Uses xargs for parallel search.
               Usage: search <string>
-- reposync:   Sync repo with the following default params: -j\$(nproc --all) --no-clone-bundle --no-tags --current-branch.
-              Pass in additional options alongside if any.
-- fetchrepos: Set up local_manifest for device and fetch the repos set in vendor/krypton/products/device.deps
+- reposync:   Sync repo with with some additional flags
+- fetchrepos: Set up local_manifest for device and fetch the repos set in device/<vendor>/<codename>/krypton.dependencies
               Usage: fetchrepos <device>
 - keygen:     Generate keys for signing builds.
               Usage: keygen <dir>
-              Default dir is ${ANDROID_BUILD_TOP}/certs
-- syncopengapps:  Sync OpenGapps repos.
-                  Usage: syncgapps [-i]
-                  -i to initialize git lfs in all the source repos
-- syncpixelgapps:  Sync our Gapps repo.
-                  Usage: syncpixelgapps [-i]
-                  -i to initialize git lfs in all the source repos
-- merge_aosp: Fetch and merge the given tag from aosp source for the repos forked from aosp in krypton.xml
-              Usage: merge_aosp <tag>
-              Example: merge_aosp android-11.0.0_r37
+              Default output dir is ${ANDROID_BUILD_TOP}/certs
+- sideload:   Sideload a zip while device is booted. It will boot to recovery, sideload the file and boot you back to system
+              Usage: sideload [FILE]
 EOF
+    "$ANDROID_BUILD_TOP"/vendor/krypton/scripts/merge_aosp.main.kts -h
 }
 
-function timer() {
-  local time=$(expr $2 - $1)
-  local sec=$(expr $time % 60)
-  local min=$(expr $time / 60)
-  local hr=$(expr $min / 60)
-  local min=$(expr $min % 60)
-  echo "$hr:$min:$sec"
-}
-
-function cleanup() {
-  croot
-  make clean
-  rm -rf K*.zip s*.zip
-  return $?
+function __timer() {
+    local time=$(($2 - $1))
+    local sec=$((time % 60))
+    local min=$((time / 60))
+    local hr=$((min / 60))
+    local min=$((min % 60))
+    echo "$hr:$min:$sec"
 }
 
 function fetchrepos() {
-  local deps="${ANDROID_BUILD_TOP}/vendor/krypton/products/${1}.deps"
-  local list=() # Array for holding the projects
-  local repos=() # Array for storing the values for the <project> tag
-  local dir="${ANDROID_BUILD_TOP}/.repo/local_manifests" # Local manifest directory
-  local manifest="${dir}/${1}.xml" # Local manifest
-  [ -z $1 ] && echo -e "${ERROR}: device name cannot be empty.Usage: fetchrepos <device>${NC}" && return 1
-  [ ! -f $deps ] && echo -e "${ERROR}: deps file $deps not found" && return 1 # Return if deps file is not found
-  echo -e "${INFO}: Setting up manifest for ${1}${NC}"
-
-  [ ! -d $dir ] && mkdir -p $dir
-  echo -e "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<manifest>" > $manifest
-
-  # Grab all the projects
-  while read -r project; do
-    [[ ! $project =~ ^#.* ]] && list+=("$project")
-  done < $deps
-
-  for ((i=0; i<${#list[@]}; i++)); do
-    local project=()
-    for val in ${list[i]}; do
-      project+=($val)
-    done
-    echo -e "\t<project ${project[@]} />" >> $manifest
-  done
-  echo "</manifest>" >> $manifest # Manifest has been written
-  echo -e "${INFO}: Fetching repos....${NC}"
-  reposync # Sync the repos
-}
-
-function chk_device() {
-  device=""
-  official=false
-  for entry in ${krypton_products[@]}; do
-    local product=${entry%:*}
-    local product_num=${entry#*:}
-    if [ $1 == $product_num ] || [ $1 == $product ] ; then
-      device="$product"
-      official=true
-      break
+    if [ -z "$1" ]; then
+        __print_error "Device name must not be empty"
+        return 1
     fi
-  done
-  [ -z $device ] && device="$1"
-  # Show official or unofficial status
-  if $official ; then
-    echo -e "${INFO}: device $device is officially supported by KOSP${NC}"
-  else
-    echo -e "${WARN}: device $device is not officially supported by KOSP${NC}"
-  fi
+    if ! command -v python3 &>/dev/null; then
+        __print_error "Python3 is not installed"
+        return 1
+    fi
+    $(which python3) vendor/krypton/build/tools/roomservice.py "$1"
 }
 
 function launch() {
-  buildDate=$(date "+%Y%m%d")
-  OPTIND=1
-  local variant=""
-  local wipe=false
-  local installclean=false
-  local json=false
-  local fastbootZip=false
+    OPTIND=1
+    local variant
+    local wipe=false
+    local installclean=false
+    local json=false
+    local fastbootZip=false
+    local bootImage=false
+    local sideloadZip=false
+    local outputDir
+    local incremental=false
+    local buildBothTargets=false
+    local targetFilesDir
 
-  # Check for official devices
-  chk_device $1; shift # Remove device name from options
+    local device="$1"
+    shift # Remove device name from options
 
-  # Check for build variant
-  check_variant $1
-  [ $? -ne 0 ] && echo -e "${ERROR}: invalid build variant${NC}" && return 1
-  variant=$1; shift # Remove build variant from options
-  GAPPS_BUILD=false # Reset it here everytime
-  while getopts ":gwcjf" option; do
-    case $option in
-      g) GAPPS_BUILD=true;;
-      w) wipe=true;;
-      c) installclean=true;;
-      j) json=true;;
-      f) fastbootZip=true;;
-     \?) echo -e "${ERROR}: invalid option, run hmm and learn the proper syntax${NC}"; return 1
-    esac
-  done
-  export GAPPS_BUILD # Set whether to include gapps in the rom
+    # Check for build variant
+    if ! check_variant "$1"; then
+        __print_error "Invalid build variant" && return 1
+    fi
+    variant=$1
+    shift             # Remove build variant from options
+    GAPPS_BUILD=false # Reset it here everytime
+    local SHORT="g,w,c,j,f,b,o:,i:"
+    local LONG="gapps,wipe,output-dir:,incremental:,build-both-targets"
+    local OPTS
+    if ! OPTS=$(getopt -a -n launch --options $SHORT --longoptions $LONG -- "$@"); then
+        return 1
+    fi
 
-  # Execute rest of the commands now as all vars are set.
-  timeStart=$(date "+%s")
+    eval set -- "$OPTS"
 
-  if $wipe ; then
-    cleanup
-  elif $installclean ; then
-    make install-clean
-  fi
+    while :; do
+        case "$1" in
+        -g)
+            export GAPPS_BUILD=true
+            shift
+            ;;
+        -w)
+            wipe=true
+            shift
+            ;;
+        -c)
+            installclean=true
+            shift
+            ;;
+        -j)
+            json=true
+            shift
+            ;;
+        -f)
+            fastbootZip=true
+            shift
+            ;;
+        -b)
+            bootImage=true
+            shift
+            ;;
+        -s)
+            sideloadZip=true
+            shift
+            ;;
+        -o | --output-dir)
+            outputDir="$2"
+            shift 2
+            ;;
+        -i | --incremental)
+            targetFilesDir="$2"
+            shift 2
+            ;;
+        --build-both-targets)
+            buildBothTargets=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            __print_error "Unknown option: $1"
+            return 1
+            ;;
+        esac
+    done
 
-  lunch krypton_$device-$variant
-  STATUS=$?
+    # Execute rest of the commands now as all vars are set.
+    startTime=$(date "+%s")
 
-  if [ $STATUS -eq 0 ] ; then
-    make -j$(nproc --all) kosp
-    STATUS=$?
-  else
-    return $STATUS
-  fi
+    if ! lunch "krypton_$device-$variant"; then
+        return 1
+    fi
 
-  if [ $STATUS -eq 0 ] ; then
-    rename_zip
-    STATUS=$?
-  else
-    return $STATUS
-  fi
+    if $wipe; then
+        make clean
+        [ -d "$outputDir" ] && rm -rf "${outputDir:?}/*"
+    elif $installclean; then
+        make install-clean
+        [ -d "$outputDir" ] && rm -rf "${outputDir:?}/*"
+    fi
 
-  if [ $STATUS -eq 0 ] ; then
-    if $json ; then
-      gen_info "-j"
-      STATUS=$?
+    if [ -z "$outputDir" ]; then
+        outputDir="$OUT"
     else
-      gen_info
-      STATUS=$?
+        outputDir="$ANDROID_BUILD_TOP/$outputDir"
+        [ -d "$outputDir" ] || mkdir -p "$outputDir"
     fi
-  else
-    return $STATUS
-  fi
 
-  if [ $STATUS -eq 0 ] ; then
-    if $fastbootZip ; then
-      gen_fastboot_zip
-      STATUS=$?
+    export KOSP_OUT="$outputDir"
+
+    if [ -n "$targetFilesDir" ]; then
+        if $installclean; then
+            __print_warn "All files in $targetFilesDir will be deleted before copying new target files"
+        fi
+        if [ ! -d "$targetFilesDir" ]; then
+            mkdir -p "$targetFilesDir"
+        fi
     fi
-  fi
 
-  endTime=$(date "+%s")
-  echo -e "${INFO}: build finished in $(timer $timeStart $endTime)${NC}"
+    local targets="kosp"
+    local previousTargetFile
+    if [ -n "$targetFilesDir" ] ; then
+        previousTargetFile=$(find "$targetFilesDir" -type f -name "*target_files*.zip" | sort -n | tail -n 1)
+        if [ -n "$previousTargetFile" ]; then
+            incremental=true
+            if $buildBothTargets; then
+                targets="kosp kosp-incremental"
+            else
+                targets="kosp-incremental"
+            fi
+            export PREVIOUS_TARGET_FILES_PACKAGE="$previousTargetFile"
+        else
+            __print_info "Previous target files package not present, using default target"
+        fi
+    fi
+    if ! $incremental && [ -n "$PREVIOUS_TARGET_FILES_PACKAGE" ]; then
+        export PREVIOUS_TARGET_FILES_PACKAGE=
+    fi
+    if $fastbootZip; then
+        targets="$targets kosp-fastboot"
+    fi
+    if $bootImage; then
+        targets="$targets kosp-boot"
+    fi
 
-  return $STATUS
+    m "$targets" &&
+        if [ -d "$targetFilesDir" ]; then
+            if $installclean; then
+                __print_info "Deleting old target files"
+                rm -rf "${targetFilesDir:?}"/*
+            fi
+            __copy_new_target_files
+        fi &&
+        if $json; then
+            gen_json -o "$outputDir" -i "$incremental"
+        fi
+    local STATUS=$?
+
+    endTime=$(date "+%s")
+    __print_info "Build finished in $(__timer "$startTime" "$endTime")"
+
+    if [ $STATUS -ne 0 ]; then
+        return $STATUS
+    fi
 }
 
-function rename_zip() {
-  croot
-  FULL_PATH=$(find $OUT -type f -name "KOSP*.zip" -printf "%T@ %p\n" | sort -n | tail -n 1 | awk '{print $2}')
-  FILE=$(basename $FULL_PATH)
-  FILENAME=${FILE%.*}
-  TIME=$(date "+%Y%m%d-%H%M")
-  FILE="$FILENAME-$TIME.zip"
-  DST_FILE=$OUT/$FILE
-  mv $FULL_PATH $DST_FILE
-  REL_PATH=$(realpath --relative-to="$PWD" $DST_FILE)
-  echo -e "${INFO}: Build file $REL_PATH"
+function __zip_append_timestamp() {
+    local TIME
+    TIME=$(date "+%Y%m%d-%H%M")
+    local APPENDED_ZIP
+    APPENDED_ZIP=$(sed -r "s/-*[0-9]*-*[0-9]*.zip//" <<<"$1")-"$TIME.zip"
+    echo "$APPENDED_ZIP"
 }
 
-function gen_info() {
-  croot
-
-  # Check if ota is present
-  [ $? -ne 0 ] && echo -e "${ERROR}: must provide a valid build variant${NC}" && return 1
-  [ -z $KRYPTON_BUILD ] && echo -e "${ERROR}: have you run lunch?${NC}" && return 1
-
-  # Version (must be in sync with KryptonProps.mk)
-  local versionMajor=1
-  local versionMinor=0
-  local version="$versionMajor.$versionMinor"
-
-  FILE=$(find $OUT -type f -name "KOSP*.zip" -printf "%p\n" | sort -n | tail -n 1)
-  NAME=$(basename $FILE)
-
-  SIZE=$(du -b $FILE | awk '{print $1}')
-  local SIZEH=$(du -h $FILE | awk '{print $1}')
-  MD5=$(md5sum $FILE | awk '{print $1}')
-
-  DATE=$(cat $OUT/system/build.prop | grep "ro.build.date.utc" | sed 's/ro.build.date.utc=//')
-
-  echo -e "${INFO}: name  : ${NAME}"
-  echo -e "${INFO}: size  : ${SIZEH} (${SIZE})"
-  echo -e "${INFO}: date  : ${DATE}"
-  echo -e "${INFO}: md5   : ${MD5}"
-
-  local JSON_DEVICE_DIR=ota/$KRYPTON_BUILD
-  JSON=$JSON_DEVICE_DIR/ota.json
-
-  if [ ! -z $1 ] && [ $1 == "-j" ] ; then
-    if [ ! -d $JSON_DEVICE_DIR ] ; then
-      mkdir -p $JSON_DEVICE_DIR
+function __copy_new_target_files() {
+    local newTargetFile
+    newTargetFile=$(find "$OUT" -type f -name "*target_files*.zip" -print -quit)
+    if [ -z "$newTargetFile" ]; then
+        return 1
     fi
+    local destTargetFile
+    destTargetFile=$(basename "$newTargetFile")
+    destTargetFile=$(__zip_append_timestamp "$destTargetFile")
+    __print_info "Copying new target files package"
+    cp "$newTargetFile" "$targetFilesDir/$destTargetFile"
+}
+
+function gen_json() {
+    croot
+    local GIT_BRANCH="A12"
+    local outDir="$OUT"
+    local incremental=false
+
+    OPTIND=1
+    while getopts ":o:i:" option; do
+        case $option in
+        o) outDir="$OPTARG" ;;
+        i) incremental="$OPTARG" ;;
+        \?)
+            __print_error "Invalid option passed to gen_json, run hmm and learn the proper syntax"
+            return 1
+            ;;
+        esac
+    done
+
+    if [ ! -d "$outDir" ]; then
+        __print_error "Output dir $outDir doesn't exist"
+        return 1
+    fi
+
+    local JSON_DEVICE_DIR=ota/"$KRYPTON_BUILD"
+    JSON=$JSON_DEVICE_DIR/ota.json
+    local INCREMENTAL_JSON
+    if $incremental; then
+        INCREMENTAL_JSON=$JSON_DEVICE_DIR/incremental_ota.json
+    fi
+
+    if [ ! -d "$JSON_DEVICE_DIR" ]; then
+        mkdir -p "$JSON_DEVICE_DIR"
+    fi
+
+    local VERSION
+    VERSION=$(get_prop_value ro.krypton.build.version)
+
+    # Check if ota is present
+    if [ -z "$KRYPTON_BUILD" ]; then
+        __print_error "Have you run lunch?"
+        return 1
+    fi
+
+    local FILE
+    FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep -vE "incremental|img" | tail -n 1 | awk '{ print $2 }')
+    local INCREMENTAL_FILE
+    INCREMENTAL_FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep "incremental" | tail -n 1 | awk '{ print $2 }')
+    if [ ! -f "$FILE" ]; then
+        __print_error "OTA file not found!"
+        return 1
+    fi
+    if $incremental && [ ! -f "$INCREMENTAL_FILE" ]; then
+        __print_error "Incremental OTA file not found!"
+        return 1
+    fi
+
+    local pre_build_incremental
+    if $incremental; then
+        pre_build_incremental=$(unzip -o -p "$INCREMENTAL_FILE" META-INF/com/android/metadata | grep pre-build-incremental | awk -F "=" '{ print $2 }')
+    fi
+
+    local DATE
+    DATE=$(($(get_prop_value ro.build.date.utc) * 1000))
+
+    local BASE_URL="https://kosp.e11z.net/d/$GIT_BRANCH/$KRYPTON_BUILD/"
+
+    local INCREMENTAL_NAME
+    INCREMENTAL_NAME=$(basename "$INCREMENTAL_FILE")
 
     # Generate ota json
-    echo -ne "{
-      \"version\"    : \"$versionMajor.$versionMinor\",
-      \"date\"       : \"$DATE\",
-      \"url\"        : \"https://downloads.kosp.workers.dev/0:/$KRYPTON_BUILD/$NAME\",
-      \"filename\"   : \"$NAME\",
-      \"filesize\"   : \"$SIZE\",
-      \"md5\"        : \"$MD5\"
-}" > $JSON
-  echo -e "${INFO}: json  : $JSON${NC}"
-  fi
+    if $incremental; then
+        cat <<EOF >"$INCREMENTAL_JSON"
+{
+    "version"               : "$VERSION",
+    "date"                  : "$DATE",
+    "url"                   : "$BASE_URL/$INCREMENTAL_NAME",
+    "file_name"             : "$INCREMENTAL_NAME",
+    "file_size"             : "$(du -b "$INCREMENTAL_FILE" | awk '{print $1}')",
+    "sha_512"               : "$(sha512sum "$INCREMENTAL_FILE" | awk '{print $1}')",
+    "pre_build_incremental" : "$pre_build_incremental"
+}
+EOF
+    fi
+
+    local NAME
+    NAME=$(basename $FILE)
+    local SIZE
+    SIZE=$(du -b "$FILE" | awk '{print $1}')
+    cat <<EOF >"$JSON"
+{
+    "version"    : "$VERSION",
+    "date"       : "$DATE",
+    "url"        : "$BASE_URL/$NAME",
+    "filename"   : "$NAME",
+    "file_name"  : "$NAME",
+    "filesize"   : "$SIZE",
+    "file_size"  : "$SIZE",
+    "md5"        : "$(md5sum "$FILE" | awk '{print $1}')",
+    "sha_512"    : "$(sha512sum "$FILE" | awk '{print $1}')"
+}
+EOF
 }
 
-function gen_fastboot_zip() {
-  local tool="./build/make/tools/releasetools/img_from_target_files"
-  local in_file=$(find $OUT/obj/PACKAGING/target_files_intermediates -type f -name "krypton_$KRYPTON_BUILD-target_files-*.zip")
-  local out_file="$OUT/fastboot-img.zip"
-  local rel_path=$(realpath --relative-to="$PWD" $out_file)
-  $tool $in_file $out_file
-  local ret=$?
-  echo -e "${INFO}: fastboot-zip  : $rel_path${NC}"
-  return $ret
+function get_prop_value() {
+    grep "$1" "$OUT/system/build.prop" | sed "s/$1=//"
 }
 
 function search() {
-  [ -z $1 ] && echo -e "${ERROR}: provide a string to search${NC}" && return 1
-  find . -type f -print0 | xargs -0 -P $(nproc --all) grep "$*" && return 0
+    [ -z "$1" ] && echo -e "${ERROR}: provide a string to search${NC}" && return 1
+    find . -type f -print0 | xargs -0 -P "$(nproc --all)" grep "$*" && return 0
 }
 
 function reposync() {
-  local SYNC_ARGS="--no-clone-bundle --no-tags --current-branch"
-  repo sync -j$(nproc --all) $SYNC_ARGS $*
-  return $?
-}
-
-function syncopengapps() {
-  local sourceroot="${ANDROID_BUILD_TOP}/vendor/opengapps/sources"
-  [ ! -d $sourceroot ] && echo "${ERROR}: OpenGapps repo has not been synced!${NC}" && return 1
-  local all="${sourceroot}/all"
-  local arm="${sourceroot}/arm"
-  local arm64="${sourceroot}/arm64"
-
-  # Initialize git lfs in the repo
-  if [ ! -z $1 ] ; then
-    if [ $1 == "-i" ] ; then
-      for dir in $all $arm $arm64; do
-        cd $dir && git lfs install
-      done
-    fi
-  fi
-
-  # Fetch files
-  for dir in $all $arm $arm64; do
-    cd $dir && git lfs fetch && git lfs checkout
-  done
-  croot
-}
-
-function syncpixelgapps() {
-  local sourceroot="${ANDROID_BUILD_TOP}/vendor/google"
-  [ ! -d $sourceroot ] && echo "${ERROR}: Gapps repo has not been synced!${NC}" && return 1
-  local gms="${sourceroot}/gms"
-  local pixel="${sourceroot}/pixel"
-
-  # Initialize git lfs in the repo
-  if [ ! -z $1 ] ; then
-    if [ $1 == "-i" ] ; then
-      for dir in $gms $pixel; do
-        cd $dir && git lfs install
-      done
-    fi
-  fi
-
-  # Fetch files
-  for dir in $gms $pixel; do
-    cd $dir && git lfs fetch && git lfs checkout
-  done
-  croot
+    local SYNC_ARGS="--optimized-fetch --no-clone-bundle --no-tags --current-branch"
+    repo sync -j"$(nproc --all)" $SYNC_ARGS "$@"
+    return $?
 }
 
 function keygen() {
-  local certsdir=${ANDROID_BUILD_TOP}/certs
-  [ -z $1 ] || certsdir=$1
-  rm -rf $certsdir
-  mkdir -p $certsdir
-  subject=""
-  echo "Sample subject: '/C=US/ST=California/L=Mountain View/O=Android/OU=Android/CN=Android/emailAddress=android@android.com'"
-  echo "Now enter subject details for your keys:"
-  for entry in C ST L O OU CN emailAddress ; do
-    echo -n "$entry:"
-    read val
-    subject+="/$entry=$val"
-  done
-  for key in releasekey platform shared media networkstack testkey; do
-    ./development/tools/make_key $certsdir/$key $subject
-  done
+    local certs_dir=${ANDROID_BUILD_TOP}/certs
+    [ -z "$1" ] || certs_dir=$1
+    rm -rf "$certs_dir"
+    mkdir -p "$certs_dir"
+    local subject
+    echo "Sample subject: '/C=US/ST=California/L=Mountain View/O=Android/OU=Android/CN=Android/emailAddress=android@android.com'"
+    echo "Now enter subject details for your keys:"
+    for entry in C ST L O OU CN emailAddress; do
+        echo -n "$entry:"
+        read -r val
+        subject+="/$entry=$val"
+    done
+    for key in releasekey platform shared media networkstack testkey; do
+        ./development/tools/make_key "$certs_dir"/$key "$subject"
+    done
+}
+
+function sideload() {
+    adb wait-for-device reboot sideload-auto-reboot && adb wait-for-device-sideload && adb sideload "$1"
 }
 
 function merge_aosp() {
-  local tag="$1"
-  local platformUrl="https://android.googlesource.com/platform/"
-  local url=
-  local excludeList="krypton|kosp|simpledeviceconfig|lineage|vendor/qcom|clang"
-  croot
-  [ -z $tag ] && echo -e "${ERROR}: aosp tag cannot be empty${NC}" && return 1
-  local manifest="${ANDROID_BUILD_TOP}/.repo/manifests/krypton.xml"
-  if [ -f $manifest ] ; then
-    while read line; do
-      if [[ $line == *"<project"* ]] ; then
-        tmp=$(echo $line | awk '{print $2}' | sed 's|path="||; s|"||')
-        if [[ -z $(echo $tmp | grep -iE $excludeList) ]] ; then
-          cd $tmp
-          git -C . rev-parse 2>/dev/null
-          if [ $? -eq 0 ] ; then
-            if [ $tmp == "build/make" ] ; then
-              url="${platformUrl}build"
-            else
-              url="$platformUrl$tmp"
-            fi
-            remoteName=$(git remote -v | grep -m 1 "$url" | awk '{print $1}')
-            if [ -z $remoteName ] ; then
-              echo "adding remote for $tmp"
-              remoteName="aosp"
-              git remote add $remoteName $url
-            fi
-            # skip system/core as we have rebased this repo, manually cherry-pick the patches
-            if [[ $tmp == "system/core" ]] ; then
-              echo -e "${INFO}: skipping $tmp, please do a manual merge${NC}"
-              croot
-              continue
-            fi
-            echo -e "${INFO}: merging tag $tag in $tmp${NC}"
-            git fetch $remoteName $tag && git merge FETCH_HEAD
-            if [ $? -eq 0 ] ; then
-              echo -e "${INFO}: merged tag $tag${NC}"
-              git push krypton HEAD:A11
-              if [ $? -ne 0 ] ; then
-                echo -e "${ERROR}: pushing changes failed, please do a manual push${NC}"
-              fi
-            else
-              echo -e "${ERROR}: merging tag $tag failed, please do a manual merge${NC}"
-              croot
-              return 1
-            fi
-          else
-            echo -e "${ERROR}: $tmp is not a git repo${NC}"
-            croot
-            return 1
-          fi
-          croot
-        fi
-      fi
-    done < $manifest
-  else
-    echo -e "${ERROR}: unable to find $manifest file${NC}" && return 1
-  fi
+    "$ANDROID_BUILD_TOP"/vendor/krypton/scripts/merge_aosp.main.kts "$@"
+}
+
+function __print_info() {
+    echo -e "${INFO}: $*${NC}"
+}
+
+function __print_warn() {
+    echo -e "${WARN}: $*${NC}"
+}
+
+function __print_error() {
+    echo -e "${ERROR}: $*${NC}"
 }
