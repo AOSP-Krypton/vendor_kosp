@@ -353,7 +353,8 @@ function gen_json() {
     local DATE
     DATE=$(($(get_prop_value ro.build.date.utc) * 1000))
 
-    local BASE_URL="https://kosp.e11z.net/d/$GIT_BRANCH/$KRYPTON_BUILD"
+    local PRIMARY_URL="https://kosp.e11z.net/d/$GIT_BRANCH/$KRYPTON_BUILD"
+    local SECONDARY_URL="https://sourceforge.net/projects/kosp/files/$GIT_BRANCH/$KRYPTON_BUILD"
 
     local INCREMENTAL_NAME
     INCREMENTAL_NAME=$(basename "$INCREMENTAL_FILE")
@@ -362,13 +363,17 @@ function gen_json() {
     if $incremental; then
         cat <<EOF >"$INCREMENTAL_JSON"
 {
-    "version"               : "$VERSION",
-    "date"                  : "$DATE",
-    "url"                   : "$BASE_URL/$INCREMENTAL_NAME",
-    "file_name"             : "$INCREMENTAL_NAME",
-    "file_size"             : "$(du -b "$INCREMENTAL_FILE" | awk '{print $1}')",
-    "sha_512"               : "$(sha512sum "$INCREMENTAL_FILE" | awk '{print $1}')",
-    "pre_build_incremental" : "$pre_build_incremental"
+    "version": "$VERSION",
+    "date": "$DATE",
+    "url": "$PRIMARY_URL/$INCREMENTAL_NAME",
+    "download_sources": {
+        "OneDrive": "$PRIMARY_URL/$INCREMENTAL_NAME",
+        "Sourceforge": "$SECONDARY_URL/$INCREMENTAL_NAME"
+    },
+    "file_name": "$INCREMENTAL_NAME",
+    "file_size": "$(du -b "$INCREMENTAL_FILE" | awk '{print $1}')",
+    "sha_512": "$(sha512sum "$INCREMENTAL_FILE" | awk '{print $1}')",
+    "pre_build_incremental": "$pre_build_incremental"
 }
 EOF
         # No need to proceed if full ota isn't present
@@ -383,15 +388,19 @@ EOF
     SIZE=$(du -b "$FILE" | awk '{print $1}')
     cat <<EOF >"$JSON"
 {
-    "version"    : "$VERSION",
-    "date"       : "$DATE",
-    "url"        : "$BASE_URL/$NAME",
-    "filename"   : "$NAME",
-    "file_name"  : "$NAME",
-    "filesize"   : "$SIZE",
-    "file_size"  : "$SIZE",
-    "md5"        : "$(md5sum "$FILE" | awk '{print $1}')",
-    "sha_512"    : "$(sha512sum "$FILE" | awk '{print $1}')"
+    "version": "$VERSION",
+    "date": "$DATE",
+    "url": "$PRIMARY_URL/$NAME",
+    "download_sources": {
+        "OneDrive": "$PRIMARY_URL/$NAME",
+        "Sourceforge": "$SECONDARY_URL/$NAME"
+    },
+    "filename": "$NAME",
+    "file_name": "$NAME",
+    "filesize": "$SIZE",
+    "file_size": "$SIZE",
+    "md5": "$(md5sum "$FILE" | awk '{print $1}')",
+    "sha_512": "$(sha512sum "$FILE" | awk '{print $1}')"
 }
 EOF
 }
