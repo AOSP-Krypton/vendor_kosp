@@ -279,8 +279,7 @@ function __copy_new_target_files() {
 
 function gen_json() {
     croot
-    local GIT_BRANCH
-    GIT_BRANCH="$(git -C vendor/krypton branch --show-current -q)"
+    local GIT_BRANCH="A12"
     local outDir="$OUT"
     local incremental=false
     local bothTargetsExist=false
