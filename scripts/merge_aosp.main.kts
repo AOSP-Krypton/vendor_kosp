@@ -105,8 +105,11 @@ fun parseSavedState() {
     try {
         FileInputStream(savedStateFile).bufferedReader().use {
             it.readText()
-        }.split("\n").forEach {
-            val path = it.substringBefore(";")
+        }.split("\n").map {
+            it.substringBefore(";")
+        }.filter {
+            it.isNotBlank()
+        }.forEach {
             savedStateMap[path] = parseStateFromString(it)
         }
     } catch (e: IOException) {
