@@ -5,9 +5,3 @@ include vendor/krypton/config/BoardConfigQcom.mk
 endif
 
 include vendor/krypton/config/BoardConfigSoong.mk
-
-# OTA Updater
-ifeq ($(strip $(AB_OTA_UPDATER)),true)
-PRODUCT_PACKAGES += \
-    KOSP-Updater
-endif
