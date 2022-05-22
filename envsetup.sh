@@ -227,8 +227,14 @@ function launch() {
             __print_info "Previous target files package not present, using default target"
         fi
     fi
-    if ! $incremental && [ -n "$PREVIOUS_TARGET_FILES_PACKAGE" ]; then
-        export PREVIOUS_TARGET_FILES_PACKAGE=
+    if ! $incremental ; then
+        if [ -n "$PREVIOUS_TARGET_FILES_PACKAGE" ]; then
+            export PREVIOUS_TARGET_FILES_PACKAGE=
+        fi
+        # Reset if previous target files is not present
+        if $buildBothTargets ; then
+            buildBothTargets=false
+        fi
     fi
     if $fastbootZip; then
         targets+=("kosp-fastboot")
