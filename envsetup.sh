@@ -173,6 +173,11 @@ function launch() {
         esac
     done
 
+    if $buildBothTargets && [[ -z "$targetFilesDir" ]] ; then
+        __print_error "--build-both-targets should not be used without --incremental | -i"
+        return 1
+    fi
+
     # Execute rest of the commands now as all vars are set.
     startTime=$(date "+%s")
 
