@@ -110,6 +110,7 @@ fun parseSavedState() {
         }.filter {
             it.isNotBlank()
         }.forEach {
+	    val path = it.substringBefore(";")
             savedStateMap[path] = parseStateFromString(it)
         }
     } catch (e: IOException) {
