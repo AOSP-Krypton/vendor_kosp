@@ -28,7 +28,8 @@ SOONG_CONFIG_kospGlobalVars += \
     target_init_vendor_lib \
     camera_needs_client_info_defaults  \
     target_ld_shim_libs \
-    gralloc_handle_has_reserved_size
+    gralloc_handle_has_reserved_size \
+    camera_needs_client_info_lib
 
 SOONG_CONFIG_NAMESPACES += kospQcomVars
 SOONG_CONFIG_kospQcomVars += \
@@ -63,6 +64,7 @@ SOONG_CONFIG_kospQcomVars_uses_pre_uplink_features_netmgrd := $(TARGET_USES_PRE_
 SOONG_CONFIG_kospGlobalVars_camera_skip_kind_check := $(CAMERA_SKIP_KIND_CHECK)
 SOONG_CONFIG_kospGlobalVars_target_surfaceflinger_udfps_lib := $(TARGET_SURFACEFLINGER_UDFPS_LIB)
 SOONG_CONFIG_kospGlobalVars_target_ld_shim_libs := $(subst $(space),:,$(TARGET_LD_SHIM_LIBS))
+SOONG_CONFIG_kospGlobalVars_camera_needs_client_info_lib := $(TARGET_CAMERA_NEEDS_CLIENT_INFO_LIB)
 SOONG_CONFIG_kospQcomVars_no_camera_smooth_apis := $(TARGET_HAS_NO_CAMERA_SMOOTH_APIS)
 SOONG_CONFIG_kospQcomVars_uses_qti_camera_device := $(TARGET_USES_QTI_CAMERA_DEVICE)
 SOONG_CONFIG_kospGlobalVars_target_init_vendor_lib := $(TARGET_INIT_VENDOR_LIB)
