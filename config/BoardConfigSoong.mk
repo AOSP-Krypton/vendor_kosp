@@ -35,8 +35,6 @@ SOONG_CONFIG_kospQcomVars += \
     no_camera_smooth_apis \
     uses_qti_camera_device \
     should_wait_for_qsee \
-    supports_hw_fde \
-    supports_hw_fde_perf \
     supports_extended_compress_format \
     uses_pre_uplink_features_netmgrd
 
@@ -70,8 +68,6 @@ SOONG_CONFIG_kospQcomVars_uses_qti_camera_device := $(TARGET_USES_QTI_CAMERA_DEV
 SOONG_CONFIG_kospGlobalVars_target_init_vendor_lib := $(TARGET_INIT_VENDOR_LIB)
 SOONG_CONFIG_kospGlobalVars_camera_needs_client_info_defaults := $(TARGET_CAMERA_NEEDS_CLIENT_INFO)
 SOONG_CONFIG_kospQcomVars_should_wait_for_qsee := $(TARGET_KEYMASTER_WAIT_FOR_QSEE)
-SOONG_CONFIG_kospQcomVars_supports_hw_fde := $(TARGET_HW_DISK_ENCRYPTION)
-SOONG_CONFIG_kospQcomVars_supports_hw_fde_perf := $(TARGET_HW_DISK_ENCRYPTION_PERF)
 SOONG_CONFIG_kospQcomVars_supports_extended_compress_format := $(AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT)
 
 ifneq ($(filter $(QSSI_SUPPORTED_PLATFORMS),$(TARGET_BOARD_PLATFORM)),)
