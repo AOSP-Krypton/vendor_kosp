@@ -23,7 +23,6 @@ SOONG_CONFIG_kospVarsPlugin :=
 
 SOONG_CONFIG_NAMESPACES += kospGlobalVars
 SOONG_CONFIG_kospGlobalVars += \
-    bootloader_message_offset \
     camera_skip_kind_check \
     target_surfaceflinger_udfps_lib \
     target_init_vendor_lib \
@@ -50,7 +49,6 @@ define addVar
 endef
 
 # Set default values
-BOOTLOADER_MESSAGE_OFFSET ?= 0
 TARGET_SURFACEFLINGER_UDFPS_LIB ?= surfaceflinger_udfps_lib
 TARGET_INIT_VENDOR_LIB ?= vendor_init
 TARGET_CAMERA_NEEDS_CLIENT_INFO ?= false
@@ -60,7 +58,6 @@ SOONG_CONFIG_kospQcomVars_uses_pre_uplink_features_netmgrd := $(TARGET_USES_PRE_
 
 # Soong value variables
 SOONG_CONFIG_kospGlobalVars_camera_skip_kind_check := $(CAMERA_SKIP_KIND_CHECK)
-SOONG_CONFIG_kospGlobalVars_bootloader_message_offset := $(BOOTLOADER_MESSAGE_OFFSET)
 SOONG_CONFIG_kospGlobalVars_target_surfaceflinger_udfps_lib := $(TARGET_SURFACEFLINGER_UDFPS_LIB)
 SOONG_CONFIG_kospGlobalVars_target_ld_shim_libs := $(subst $(space),:,$(TARGET_LD_SHIM_LIBS))
 SOONG_CONFIG_kospQcomVars_no_camera_smooth_apis := $(TARGET_HAS_NO_CAMERA_SMOOTH_APIS)
