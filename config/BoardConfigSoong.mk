@@ -27,7 +27,8 @@ SOONG_CONFIG_kospGlobalVars += \
     target_surfaceflinger_udfps_lib \
     target_init_vendor_lib \
     camera_needs_client_info_defaults  \
-    target_ld_shim_libs
+    target_ld_shim_libs \
+    gralloc_handle_has_reserved_size
 
 SOONG_CONFIG_NAMESPACES += kospQcomVars
 SOONG_CONFIG_kospQcomVars += \
@@ -52,8 +53,10 @@ endef
 TARGET_SURFACEFLINGER_UDFPS_LIB ?= surfaceflinger_udfps_lib
 TARGET_INIT_VENDOR_LIB ?= vendor_init
 TARGET_CAMERA_NEEDS_CLIENT_INFO ?= false
+TARGET_GRALLOC_HANDLE_HAS_RESERVED_SIZE ?= false
 
 # Soong bool variables
+SOONG_CONFIG_kospGlobalVars_gralloc_handle_has_reserved_size := $(TARGET_GRALLOC_HANDLE_HAS_RESERVED_SIZE)
 SOONG_CONFIG_kospQcomVars_uses_pre_uplink_features_netmgrd := $(TARGET_USES_PRE_UPLINK_FEATURES_NETMGRD)
 
 # Soong value variables
