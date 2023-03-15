@@ -1,12 +1,9 @@
-#
-# Krypton-specific macros
-#
 define uniq
 $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
 endef
  
 # Include board/platform macros
-include vendor/krypton/build/core/utils.mk
+include vendor/kosp/build/core/utils.mk
 
 # Include vendor platform definitions
-include vendor/krypton/build/core/vendor/*.mk
+include vendor/kosp/build/core/vendor/*.mk

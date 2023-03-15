@@ -1,5 +1,5 @@
 # Inherit common stuff
-$(call inherit-product, vendor/krypton/config/common.mk)
+$(call inherit-product, vendor/kosp/config/common.mk)
 
 # World APN list
 PRODUCT_PACKAGES += \

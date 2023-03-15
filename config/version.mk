@@ -1,4 +1,4 @@
-# Copyright 2021 AOSP-Krypton Project
+# Copyright 2021-2023 AOSP-Krypton Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,25 +13,19 @@
 # limitations under the License.
 
 # Version and fingerprint
-KRYPTON_VERSION_MAJOR := 2
-KRYPTON_VERSION_MINOR := 8
-KRYPTON_VERSION := $(KRYPTON_VERSION_MAJOR).$(KRYPTON_VERSION_MINOR)
+KOSP_VERSION_MAJOR := 3
+KOSP_VERSION_MINOR := 0
+KOSP_VERSION := $(KOSP_VERSION_MAJOR).$(KOSP_VERSION_MINOR)
 
 # Set props
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
-  ro.krypton.build.device=$(KRYPTON_BUILD) \
-  ro.krypton.build.version=$(KRYPTON_VERSION)
-
-KOSP_OTA_PACKAGE_NAME := KOSP-$(KRYPTON_VERSION)-$(KRYPTON_BUILD)-$(TARGET_BUILD_VARIANT)
-
-ifeq ($(strip $(OFFICIAL_BUILD)),true)
-KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-OFFICIAL
-else
-KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-UNOFFICIAL
-endif
+  ro.kosp.build.device=$(KOSP_BUILD) \
+  ro.kosp.build.version=$(KOSP_VERSION)
 
 ifeq ($(strip $(GAPPS_BUILD)),true)
-KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-GAPPS
+KOSP_BUILD_FLAVOR := GApps
 else
-KOSP_OTA_PACKAGE_NAME := $(KOSP_OTA_PACKAGE_NAME)-VANILLA
+KOSP_BUILD_FLAVOR := Vanilla
 endif
+
+KOSP_OTA_PACKAGE_NAME := KOSP-v$(KOSP_VERSION)-$(KOSP_BUILD)-$(TARGET_BUILD_VARIANT)-$(KOSP_BUILD_FLAVOR)

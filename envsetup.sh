@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021 AOSP-Krypton Project
+# Copyright 2021-2023 AOSP-Krypton Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,33 +31,27 @@ WARN="${LY}Warning"
 # Set to non gapps build by default
 export GAPPS_BUILD=false
 
-function krypton_help() {
+function kosp_help() {
     cat <<EOF
-Krypton specific functions:
+KOSP specific functions:
 - launch:     Build a full ota package.
               Usage: launch <device> <variant> [OPTIONS]
                       [-g | --gapps] to build gapps variant.
                       [-w | --wipe] to wipe out directory.
                       [-c] to do an install-clean. Also deletes contents of target files dir before copying new target
                          files if specified with -i option
-                      [-j] to generate ota json for the device.
                       [-f] to generate fastboot zip
-                      [-b] to generate boot.img
+                      [--images] IMG1,IMG2.. to copy out specified images from generated target files.
                       [-o | --output-dir] to set the destination dir (relative) of generated ota zip file, boot.img and such
                       [-i | --incremental] to specify directory containing incremental update zip to generate an incremental update.
                          If the directory does not contain target files then default target is built, otherwise
                          incremental target is built. New target files will be copied and replaced in this directory
                          for each build. Do note that this directory will be wiped before copying new files.
                       [--build-both-targets] to build full OTA along with an incremental OTA. Only works when [-i] is provided.
-- gen_json:   Generate ota json info.
-              Usage: gen_json [OPTIONS]
-                      [-i] true | false. Pass in true to create json for incremental OTA.
-                      [-b] true | false. Pass in true to create json for full OTA along with incremental OTA (-i must be true).
-                      [-o] to set the destination dir (relative) which contains generated ota zip file.
 - search:     Search in every file in the current directory for a string. Uses xargs for parallel search.
               Usage: search <string>
 - reposync:   Sync repo with with some additional flags
-- fetchrepos: Set up local_manifest for device and fetch the repos set in device/<vendor>/<codename>/krypton.dependencies
+- fetchrepos: Set up local_manifest for device and fetch the repos set in device/<vendor>/<codename>/kosp.dependencies
               Usage: fetchrepos <device>
 - keygen:     Generate keys for signing builds.
               Usage: keygen <dir>
@@ -65,7 +59,7 @@ Krypton specific functions:
 - sideload:   Sideload a zip while device is booted. It will boot to recovery, sideload the file and boot you back to system
               Usage: sideload [FILE]
 EOF
-    "$ANDROID_BUILD_TOP"/vendor/krypton/scripts/merge_aosp.main.kts -h
+    "$ANDROID_BUILD_TOP"/vendor/kosp/scripts/merge_aosp.main.kts -h
 }
 
 function __timer() {
@@ -86,7 +80,7 @@ function fetchrepos() {
         __print_error "Python3 is not installed"
         return 1
     fi
-    $(which python3) vendor/krypton/build/tools/roomservice.py "$1"
+    $(which python3) vendor/kosp/build/tools/roomservice.py "$1"
 }
 
 function launch() {
@@ -94,14 +88,13 @@ function launch() {
     local variant
     local wipe=false
     local installclean=false
-    local json=false
     local fastbootZip=false
-    local bootImage=false
     local outputDir
     local incremental=false
     local buildBothTargets=false
     local targetFilesDir
     local wipeTargetFilesDir=false
+    local images=()
 
     local device="$1"
     shift # Remove device name from options
@@ -113,8 +106,8 @@ function launch() {
     variant=$1
     shift             # Remove build variant from options
     GAPPS_BUILD=false # Reset it here everytime
-    local SHORT="g,w,c,j,f,b,o:,i:"
-    local LONG="gapps,wipe,output-dir:,incremental:,build-both-targets"
+    local SHORT="g,w,c,f,o:,i:"
+    local LONG="gapps,wipe,output-dir:,incremental:,build-both-targets,images:"
     local OPTS
     if ! OPTS=$(getopt -a -n launch --options $SHORT --longoptions $LONG -- "$@"); then
         return 1
@@ -138,16 +131,8 @@ function launch() {
             wipeTargetFilesDir=true
             shift
             ;;
-        -j)
-            json=true
-            shift
-            ;;
         -f)
             fastbootZip=true
-            shift
-            ;;
-        -b)
-            bootImage=true
             shift
             ;;
         -o | --output-dir)
@@ -161,6 +146,10 @@ function launch() {
         --build-both-targets)
             buildBothTargets=true
             shift
+            ;;
+        --images)
+            IFS="," read -a images <<< "$2"
+            shift 2
             ;;
         --)
             shift
@@ -181,7 +170,7 @@ function launch() {
     # Execute rest of the commands now as all vars are set.
     startTime=$(date "+%s")
 
-    if ! lunch "krypton_$device-$variant"; then
+    if ! lunch "kosp_$device-$variant"; then
         return 1
     fi
 
@@ -190,6 +179,7 @@ function launch() {
         [ -d "$outputDir" ] && rm -rf "${outputDir:?}/*"
     elif $installclean; then
         make install-clean
+        rm -rf "$OUT/obj/KERNEL_OBJ"
         [ -d "$outputDir" ] && rm -rf "${outputDir:?}/*"
     fi
 
@@ -239,12 +229,16 @@ function launch() {
     if $fastbootZip; then
         targets+=("kosp-fastboot")
     fi
-    if $bootImage; then
-        targets+=("kosp-boot")
-    fi
 
     for target in "${targets[@]}"; do
         m "$target" || return 1
+    done
+
+    local export_dir=$(get_build_var KOSP_OUT)
+    local img_prefix=$(get_build_var KOSP_OTA_PACKAGE_NAME)
+    local intermediates_dir="$OUT/obj/PACKAGING/target_files_intermediates"
+    for img in "${images[@]}"; do
+        cp -f "$intermediates_dir"/*/IMAGES/"$img".img "$export_dir/$img_prefix-$(date +%Y%m%d-%H%M)-$img.img" || return 1
     done
 
     if [ -d "$targetFilesDir" ]; then
@@ -253,10 +247,7 @@ function launch() {
             rm -rf "${targetFilesDir:?}"/*
         fi
         __copy_new_target_files
-    fi &&
-        if $json; then
-            gen_json -o "$outputDir" -i "$incremental" -b "$buildBothTargets"
-        fi
+    fi
     local STATUS=$?
 
     endTime=$(date "+%s")
@@ -286,137 +277,6 @@ function __copy_new_target_files() {
     destTargetFile=$(__zip_append_timestamp "$destTargetFile")
     __print_info "Copying new target files package"
     cp "$newTargetFile" "$targetFilesDir/$destTargetFile"
-}
-
-function gen_json() {
-    croot
-    local GIT_BRANCH="A12"
-    local outDir="$OUT"
-    local incremental=false
-    local bothTargetsExist=false
-
-    OPTIND=1
-    while getopts ":o:i:b:" option; do
-        case $option in
-        o) outDir="$OPTARG" ;;
-        i) incremental="$OPTARG" ;;
-        b) bothTargetsExist="$OPTARG" ;;
-        \?)
-            __print_error "Invalid option passed to gen_json, run hmm and learn the proper syntax"
-            return 1
-            ;;
-        esac
-    done
-
-    if $bothTargetsExist && ! $incremental; then
-        echo "Both targets cannot exist if not incremental"
-        return 1
-    fi
-
-    if [ ! -d "$outDir" ]; then
-        __print_error "Output dir $outDir doesn't exist"
-        return 1
-    fi
-
-    if [ -z "$KRYPTON_BUILD" ]; then
-        __print_error "Have you run lunch?"
-        return 1
-    fi
-
-    local JSON_DEVICE_DIR=ota/"$KRYPTON_BUILD"
-    JSON=$JSON_DEVICE_DIR/ota.json
-    local INCREMENTAL_JSON
-    if $incremental; then
-        INCREMENTAL_JSON=$JSON_DEVICE_DIR/incremental_ota.json
-    fi
-
-    if [ ! -d "$JSON_DEVICE_DIR" ]; then
-        mkdir -p "$JSON_DEVICE_DIR"
-    fi
-
-    local VERSION
-    VERSION=$(get_prop_value ro.krypton.build.version)
-
-    local FILE
-    FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep -vE "incremental|img" | tail -n 1 | awk '{ print $2 }')
-    if ! $incremental && [ ! -f "$FILE" ]; then
-        __print_error "OTA file not found!"
-        return 1
-    fi
-    if $incremental && $bothTargetsExist && [ ! -f "$FILE" ]; then
-        __print_error "OTA file not found!"
-        return 1
-    fi
-
-    local INCREMENTAL_FILE
-    INCREMENTAL_FILE=$(find "$outDir" -type f -name "KOSP*$KRYPTON_BUILD*.zip" -printf "%T@ %p\n" | grep "incremental" | tail -n 1 | awk '{ print $2 }')
-    if $incremental && [ ! -f "$INCREMENTAL_FILE" ]; then
-        __print_error "Incremental OTA file not found!"
-        return 1
-    fi
-
-    local pre_build_incremental
-    if $incremental; then
-        pre_build_incremental=$(unzip -o -p "$INCREMENTAL_FILE" META-INF/com/android/metadata | grep pre-build-incremental | awk -F "=" '{ print $2 }')
-    fi
-
-    local DATE
-    DATE=$(($(get_prop_value ro.build.date.utc) * 1000))
-
-    local PRIMARY_URL="https://kosp.e11z.net/d/$GIT_BRANCH/$KRYPTON_BUILD"
-    local SECONDARY_URL="https://sourceforge.net/projects/kosp/files/$GIT_BRANCH/$KRYPTON_BUILD"
-
-    local INCREMENTAL_NAME
-    INCREMENTAL_NAME=$(basename "$INCREMENTAL_FILE")
-
-    # Generate ota json
-    if $incremental; then
-        cat <<EOF >"$INCREMENTAL_JSON"
-{
-    "version": "$VERSION",
-    "date": "$DATE",
-    "url": "$PRIMARY_URL/$INCREMENTAL_NAME",
-    "download_sources": {
-        "OneDrive": "$PRIMARY_URL/$INCREMENTAL_NAME",
-        "Sourceforge": "$SECONDARY_URL/$INCREMENTAL_NAME"
-    },
-    "file_name": "$INCREMENTAL_NAME",
-    "file_size": "$(du -b "$INCREMENTAL_FILE" | awk '{print $1}')",
-    "sha_512": "$(sha512sum "$INCREMENTAL_FILE" | awk '{print $1}')",
-    "pre_build_incremental": "$pre_build_incremental"
-}
-EOF
-        # No need to proceed if full ota isn't present
-        if ! $bothTargetsExist; then
-            return 0
-        fi
-    fi
-
-    local NAME
-    NAME=$(basename "$FILE")
-    local SIZE
-    SIZE=$(du -b "$FILE" | awk '{print $1}')
-    cat <<EOF >"$JSON"
-{
-    "version": "$VERSION",
-    "date": "$DATE",
-    "url": "$PRIMARY_URL/$NAME",
-    "download_sources": {
-        "OneDrive": "$PRIMARY_URL/$NAME",
-        "Sourceforge": "$SECONDARY_URL/$NAME"
-    },
-    "filename": "$NAME",
-    "file_name": "$NAME",
-    "filesize": "$SIZE",
-    "file_size": "$SIZE",
-    "md5": "$(md5sum "$FILE" | awk '{print $1}')",
-    "sha_512": "$(sha512sum "$FILE" | awk '{print $1}')"
-}
-EOF
-}
-
-function get_prop_value() {
-    grep "$1" "$OUT/system/build.prop" | sed "s/$1=//"
 }
 
 function search() {
@@ -452,7 +312,7 @@ function sideload() {
 }
 
 function merge_aosp() {
-    "$ANDROID_BUILD_TOP"/vendor/krypton/scripts/merge_aosp.main.kts "$@"
+    "$ANDROID_BUILD_TOP"/vendor/kosp/scripts/merge_aosp.main.kts "$@"
 }
 
 function __print_info() {

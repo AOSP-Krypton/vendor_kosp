@@ -1,7 +1,7 @@
 
 bootstrap_go_package {
-    name: "soong-krypton-generator",
-    pkgPath: "krypton/soong/generator",
+    name: "soong-kosp-generator",
+    pkgPath: "kosp/soong/generator",
     deps: [
         "blueprint",
         "blueprint-pathtools",
@@ -16,7 +16,7 @@ bootstrap_go_package {
     pluginFor: ["soong_build"],
 }
 
-krypton_generator {
+kosp_generator {
     name: "generated_kernel_includes",
 
     // The headers make command
@@ -52,7 +52,7 @@ cc_library_headers {
 soong_config_module_type {
     name: "bootloader_message_offset",
     module_type: "cc_defaults",
-    config_namespace: "kryptonGlobalVars",
+    config_namespace: "kospGlobalVars",
     value_variables: ["bootloader_message_offset"],
     properties: [
         "cflags",
@@ -73,7 +73,7 @@ bootloader_message_offset {
 soong_config_module_type {
     name: "surfaceflinger_udfps_lib",
     module_type: "cc_defaults",
-    config_namespace: "kryptonGlobalVars",
+    config_namespace: "kospGlobalVars",
     value_variables: ["target_surfaceflinger_udfps_lib"],
     properties: [
         "cppflags",
@@ -94,7 +94,7 @@ surfaceflinger_udfps_lib {
 soong_config_module_type {
     name: "target_shim_libs",
     module_type: "cc_defaults",
-    config_namespace: "kryptonGlobalVars",
+    config_namespace: "kospGlobalVars",
     value_variables: ["target_ld_shim_libs"],
     properties: ["cppflags"],
 }
@@ -111,7 +111,7 @@ target_shim_libs {
 soong_config_module_type {
     name: "surfaceflinger_qcom_extensions",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     value_variables: ["qcom_display_headers_namespace"],
     properties: [
         "cppflags",
@@ -122,7 +122,7 @@ soong_config_module_type {
 soong_config_module_type {
     name: "camera_skip_kind_check",
     module_type: "cc_defaults",
-    config_namespace: "kryptonGlobalVars",
+    config_namespace: "kospGlobalVars",
     bool_variables: ["camera_skip_kind_check"],
     properties: [
         "cppflags",
@@ -154,7 +154,7 @@ surfaceflinger_qcom_extensions {
 soong_config_module_type {
     name: "no_camera_smooth_apis",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["no_camera_smooth_apis"],
     properties: ["cppflags"],
 }
@@ -171,7 +171,7 @@ no_camera_smooth_apis {
 soong_config_module_type {
     name: "camera_needs_client_info",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["camera_needs_client_info"],
     properties: ["cppflags"],
 }
@@ -188,7 +188,7 @@ camera_needs_client_info {
 soong_config_module_type {
     name: "qti_camera_device",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["uses_qti_camera_device"],
     properties: [
         "cppflags",
@@ -209,7 +209,7 @@ qti_camera_device {
 soong_config_module_type {
     name: "vendor_init",
     module_type: "cc_defaults",
-    config_namespace: "kryptonGlobalVars",
+    config_namespace: "kospGlobalVars",
     value_variables: ["target_init_vendor_lib"],
     properties: ["whole_static_libs"],
 }
@@ -226,7 +226,7 @@ vendor_init {
 soong_config_module_type {
     name: "qti_cryptfshw_qsee",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["should_wait_for_qsee"],
     properties: ["cflags"],
 }
@@ -243,7 +243,7 @@ qti_cryptfshw_qsee {
 soong_config_module_type {
     name: "extended_compress_format",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["supports_extended_compress_format"],
     properties: ["cflags"],
 }
@@ -260,7 +260,7 @@ extended_compress_format {
 soong_config_module_type {
     name: "vold_hw_fde",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["supports_hw_fde"],
     properties: [
         "cflags",
@@ -283,7 +283,7 @@ vold_hw_fde {
 soong_config_module_type {
     name: "vold_hw_fde_perf",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["supports_hw_fde_perf"],
     properties: [
         "cflags",
@@ -304,7 +304,7 @@ vold_hw_fde_perf {
 soong_config_module_type {
     name: "librmnetctl_pre_uplink",
     module_type: "cc_defaults",
-    config_namespace: "kryptonQcomVars",
+    config_namespace: "kospQcomVars",
     bool_variables: ["uses_pre_uplink_features_netmgrd"],
     properties: ["cflags"],
 }

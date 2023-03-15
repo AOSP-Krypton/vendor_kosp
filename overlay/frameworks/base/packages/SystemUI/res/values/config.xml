@@ -45,5 +45,5 @@
     <bool name="config_enableShellMainThread">true</bool>
 
     <!-- SystemUIFactory component -->
-    <string name="config_systemUIFactoryComponent" translatable="false">com.krypton.systemui.KryptonSystemUIFactory</string>
+    <!--<string name="config_systemUIFactoryComponent" translatable="false">com.krypton.systemui.KryptonSystemUIFactory</string>-->
 </resources>

@@ -14,6 +14,6 @@
 # limitations under the License.
 
 # Rules for QCOM targets
-include $(TOPDIR)vendor/krypton/build/core/qcom_target.mk
+include $(TOPDIR)vendor/kosp/build/core/qcom_target.mk
 
-BUILD_RRO_SYSTEM_PACKAGE := $(TOP)/vendor/krypton/build/core/system_rro.mk
+BUILD_RRO_SYSTEM_PACKAGE := $(TOP)/vendor/kosp/build/core/system_rro.mk

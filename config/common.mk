@@ -33,36 +33,23 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     net.hostname=$(TARGET_VENDOR_DEVICE_NAME)
 
-# Backup Tool
-PRODUCT_COPY_FILES += \
-    vendor/krypton/prebuilt/common/bin/backuptool.sh:install/bin/backuptool.sh \
-    vendor/krypton/prebuilt/common/bin/backuptool.functions:install/bin/backuptool.functions \
-    vendor/krypton/prebuilt/common/bin/50-base.sh:$(TARGET_COPY_OUT_SYSTEM)/addon.d/50-base.sh
-
-ifneq ($(AB_OTA_PARTITIONS),)
-PRODUCT_COPY_FILES += \
-    vendor/krypton/prebuilt/common/bin/backuptool_ab.sh:$(TARGET_COPY_OUT_SYSTEM)/bin/backuptool_ab.sh \
-    vendor/krypton/prebuilt/common/bin/backuptool_ab.functions:$(TARGET_COPY_OUT_SYSTEM)/bin/backuptool_ab.functions \
-    vendor/krypton/prebuilt/common/bin/backuptool_postinstall.sh:$(TARGET_COPY_OUT_SYSTEM)/bin/backuptool_postinstall.sh
-endif
-
 # Charger
 PRODUCT_PACKAGES += \
     charger_res_images
 
-# Copy all krypton-specific init rc files
-$(foreach f,$(wildcard vendor/krypton/prebuilt/common/etc/init/*.rc),\
+# Copy our init rc files
+$(foreach f,$(wildcard vendor/kosp/prebuilt/common/etc/init/*.rc),\
     $(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM)/etc/init/$(notdir $f)))
 
 # Copy all app permissions xml
-$(foreach f,$(wildcard vendor/krypton/prebuilt/common/etc/permissions/*.xml),\
+$(foreach f,$(wildcard vendor/kosp/prebuilt/common/etc/permissions/*.xml),\
 	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/$(notdir $f)))
 
-$(foreach f,$(wildcard vendor/krypton/prebuilt/common/system_ext/etc/permissions/*.xml),\
+$(foreach f,$(wildcard vendor/kosp/prebuilt/common/system_ext/etc/permissions/*.xml),\
 	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/permissions/$(notdir $f)))
 
 # Sysconfig
-$(foreach f,$(wildcard vendor/krypton/prebuilts/common/product/etc/sysconfig/*.xml),\
+$(foreach f,$(wildcard vendor/kosp/prebuilts/common/product/etc/sysconfig/*.xml),\
 	$(eval PRODUCT_COPY_FILES += $(f):$(TARGET_COPY_OUT_PRODUCT)/etc/sysconfig/$(notdir $f)))
 
 # Don't compile SystemUITests
@@ -74,12 +61,12 @@ PRODUCT_ART_TARGET_INCLUDE_DEBUG_BUILD := false
 # LatinIME gesture typing
 ifeq ($(TARGET_SUPPORTS_64_BIT_APPS),arm64)
 PRODUCT_COPY_FILES += \
-    vendor/krypton/prebuilt/common/lib64/libjni_latinime.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libjni_latinime.so \
-    vendor/krypton/prebuilt/common/lib64/libjni_latinimegoogle.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libjni_latinimegoogle.so
+    vendor/kosp/prebuilt/common/lib64/libjni_latinime.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libjni_latinime.so \
+    vendor/kosp/prebuilt/common/lib64/libjni_latinimegoogle.so:$(TARGET_COPY_OUT_SYSTEM)/lib64/libjni_latinimegoogle.so
 else
 PRODUCT_COPY_FILES += \
-    vendor/krypton/prebuilt/common/lib/libjni_latinime.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libjni_latinime.so \
-    vendor/krypton/prebuilt/common/lib/libjni_latinimegoogle.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libjni_latinimegoogle.so
+    vendor/kosp/prebuilt/common/lib/libjni_latinime.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libjni_latinime.so \
+    vendor/kosp/prebuilt/common/lib/libjni_latinimegoogle.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libjni_latinimegoogle.so
 endif
 
 # Strip the local variable table and the local variable type table to reduce
@@ -88,8 +75,8 @@ endif
 PRODUCT_MINIMIZE_JAVA_DEBUG_INFO := true
 
 # Product overlay
-PRODUCT_PACKAGE_OVERLAYS += vendor/krypton/overlay
-PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += vendor/krypton/overlay
+PRODUCT_PACKAGE_OVERLAYS += vendor/kosp/overlay
+PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += vendor/kosp/overlay
 
 # Disable vendor restrictions
 PRODUCT_RESTRICT_VENDOR_FILES := false
@@ -100,13 +87,13 @@ PRODUCT_PRODUCT_PROPERTIES += \
     ro.input.video_enabled=false
 
 # Bootanimation
-include vendor/krypton/config/bootanimation.mk
+include vendor/kosp/config/bootanimation.mk
 
 # Packages
-include vendor/krypton/config/packages.mk
+include vendor/kosp/config/packages.mk
 
 # Versioning
-include vendor/krypton/config/version.mk
+include vendor/kosp/config/version.mk
 
 # ART
 # Optimize everything for preopt
@@ -151,4 +138,4 @@ PRODUCT_HOST_PACKAGES += \
 $(call inherit-product, vendor/themes/common.mk)
 
 # Sepolicy
-$(call inherit-product, vendor/krypton/config/sepolicy.mk)
+$(call inherit-product, vendor/kosp/config/sepolicy.mk)
