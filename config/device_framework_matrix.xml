@@ -4,32 +4,6 @@
      SPDX-License-Identifier: Apache-2.0
 -->
 <compatibility-matrix version="2.0" type="framework">
-    <!-- Camera -->
-    <hal format="hidl" optional="true">
-        <name>vendor.lineage.camera.motor</name>
-        <version>1.0</version>
-        <interface>
-            <name>ICameraMotor</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <!-- Charging -->
-    <hal format="hidl" optional="true">
-        <name>vendor.lineage.fastcharge</name>
-        <version>1.0</version>
-        <interface>
-            <name>IFastCharge</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <hal format="hidl" optional="true">
-        <name>vendor.lineage.powershare</name>
-        <version>1.0</version>
-        <interface>
-            <name>IPowerShare</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
     <!-- Display -->
     <hal format="hidl" optional="true">
         <name>vendor.lineage.livedisplay</name>
@@ -98,15 +72,6 @@
         </interface>
         <interface>
             <name>IStylusMode</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <!-- Trust -->
-    <hal format="hidl" optional="true">
-        <name>vendor.lineage.trust</name>
-        <version>1.0</version>
-        <interface>
-            <name>IUsbRestrict</name>
             <instance>default</instance>
         </interface>
     </hal>
