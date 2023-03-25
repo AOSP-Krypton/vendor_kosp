@@ -48,5 +48,11 @@ $(KOSP_FASTBOOT_PACKAGE): $(BUILT_TARGET_FILES_PACKAGE) $(IMG_FROM_TARGET_FILES)
 
 .PHONY: kosp-fastboot
 kosp-fastboot: $(KOSP_FASTBOOT_PACKAGE)
-	$(hide) mv $(KOSP_FASTBOOT_PACKAGE) $(KOSP_OUT)/$(KOSP_OTA_PACKAGE_NAME)-$(shell date "+%Y%m%d-%H%M")-fastboot.zip
+	rm -rf $(KOSP_OUT)/kosp_tmp
+	mkdir -p $(KOSP_OUT)/kosp_tmp
+	unzip -o -q $(KOSP_FASTBOOT_PACKAGE) -d $(KOSP_OUT)/kosp_tmp
+	rm -rf $(KOSP_FASTBOOT_PACKAGE)
+	@echo "Recompressing fastboot package..."
+	zip $(KOSP_OUT)/$(KOSP_OTA_PACKAGE_NAME)-$(shell date "+%Y%m%d-%H%M")-fastboot.zip -q -m -9 -r $(KOSP_OUT)/kosp_tmp/*
+	rm -rf $(KOSP_OUT)/kosp_tmp
 	@echo "KOSP fastboot package is ready"
