@@ -53,6 +53,6 @@ kosp-fastboot: $(KOSP_FASTBOOT_PACKAGE)
 	unzip -o -q $(KOSP_FASTBOOT_PACKAGE) -d $(KOSP_OUT)/kosp_tmp
 	rm -rf $(KOSP_FASTBOOT_PACKAGE)
 	@echo "Recompressing fastboot package..."
-	zip $(KOSP_OUT)/$(KOSP_OTA_PACKAGE_NAME)-$(shell date "+%Y%m%d-%H%M")-fastboot.zip -q -m -9 -r $(KOSP_OUT)/kosp_tmp/*
+	zip $(KOSP_OUT)/$(KOSP_OTA_PACKAGE_NAME)-$(shell date "+%Y%m%d-%H%M")-fastboot.zip -q -m -9 -j -D $(KOSP_OUT)/kosp_tmp/*
 	rm -rf $(KOSP_OUT)/kosp_tmp
 	@echo "KOSP fastboot package is ready"
