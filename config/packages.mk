@@ -14,11 +14,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     GamingMode
 
-TARGET_BUILD_LAWNCHAIR ?= false
-ifeq ($(strip $(TARGET_BUILD_LAWNCHAIR)),true)
-include vendor/lawnchair/lawnchair.mk
-endif
-
 TARGET_BUILD_VIA_BROWSER ?= true
 ifeq ($(strip $(TARGET_BUILD_VIA_BROWSER)),true)
 PRODUCT_PACKAGES += \
@@ -46,4 +41,4 @@ PRODUCT_PACKAGES += \
     RepainterServicePriv
 
 PRODUCT_PACKAGES += \
-    KOSP-Updater
+    Updater
